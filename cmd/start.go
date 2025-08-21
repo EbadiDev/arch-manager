@@ -2,7 +2,8 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/miladrahimi/p-manager/internal/app"
+
+	"github.com/ebadidev/arch-manager/internal/app"
 	"github.com/spf13/cobra"
 )
 

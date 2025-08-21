@@ -2,14 +2,15 @@ package writer
 
 import (
 	"fmt"
-	"github.com/cockroachdb/errors"
-	"github.com/miladrahimi/p-manager/internal/config"
-	"github.com/miladrahimi/p-manager/internal/database"
-	"github.com/miladrahimi/p-manager/internal/http/client"
-	"github.com/miladrahimi/p-manager/internal/utils"
-	"github.com/miladrahimi/p-node/pkg/xray"
 	"strconv"
 	"time"
+
+	"github.com/cockroachdb/errors"
+	"github.com/ebadidev/arch-manager/internal/config"
+	"github.com/ebadidev/arch-manager/internal/database"
+	"github.com/ebadidev/arch-manager/internal/http/client"
+	"github.com/ebadidev/arch-manager/internal/utils"
+	"github.com/ebadidev/arch-node/pkg/xray"
 )
 
 type Writer struct {

@@ -7,15 +7,15 @@ WORKDIR /app
 COPY . .
 
 RUN go mod tidy
-RUN go build -o p-manager
+RUN go build -o arch-manager
 RUN tar -zcf web.tar.gz web
 
 ## Deploy
-FROM ghcr.io/miladrahimi/debian:bookworm-slim
+FROM ghcr.io/ebadidev/debian:bookworm-slim
 
 WORKDIR /app
 
-COPY --from=build /app/p-manager p-manager
+COPY --from=build /app/arch-manager arch-manager
 COPY --from=build /app/web.tar.gz web.tar.gz
 COPY --from=build /app/resources/ed25519_public_key.txt resources/ed25519_public_key.txt
 COPY --from=build /app/configs/main.defaults.json configs/main.defaults.json
@@ -27,4 +27,4 @@ COPY --from=build /app/third_party/xray-linux-64/xray third_party/xray-linux-64/
 RUN tar -xvf web.tar.gz
 RUN rm web.tar.gz
 
-ENTRYPOINT ["./p-manager", "start"]
+ENTRYPOINT ["./arch-manager", "start"]

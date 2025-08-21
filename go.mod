@@ -1,4 +1,4 @@
-module github.com/miladrahimi/p-manager
+module github.com/ebadidev/arch-manager
 
 go 1.24
 
@@ -6,13 +6,13 @@ toolchain go1.24.2
 
 require (
 	github.com/cockroachdb/errors v1.12.0
+	github.com/ebadidev/arch-node v0.0.0-20250821092106-159744a8dedc
 	github.com/go-playground/validator/v10 v10.27.0
 	github.com/google/uuid v1.6.0
 	github.com/labstack/echo/v4 v4.13.4
 	github.com/labstack/gommon v0.4.2
-	github.com/miladrahimi/p-node v0.0.0-20250720080233-8805d7592d45
 	github.com/spf13/cobra v1.9.1
-	github.com/xtls/xray-core v1.250608.0
+	github.com/xtls/xray-core v1.250803.0
 	go.uber.org/zap v1.27.0
 )
 
@@ -44,6 +44,6 @@ require (
 	golang.org/x/text v0.27.0 // indirect
 	golang.org/x/time v0.12.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20250715232539-7130f93afb79 // indirect
-	google.golang.org/grpc v1.73.0 // indirect
+	google.golang.org/grpc v1.74.2 // indirect
 	google.golang.org/protobuf v1.36.6 // indirect
 )

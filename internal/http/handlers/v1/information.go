@@ -2,8 +2,8 @@ package v1
 
 import (
 	"github.com/labstack/echo/v4"
-	"github.com/miladrahimi/p-manager/internal/config"
-	"github.com/miladrahimi/p-manager/internal/licensor"
+	"github.com/ebadidev/arch-manager/internal/config"
+	"github.com/ebadidev/arch-manager/internal/licensor"
 	"net/http"
 )
 

@@ -1,12 +1,13 @@
 package pages
 
 import (
-	"github.com/labstack/echo/v4"
-	"github.com/miladrahimi/p-manager/internal/config"
-	"github.com/miladrahimi/p-manager/internal/database"
 	"net/http"
 	"os"
 	"path/filepath"
+
+	"github.com/ebadidev/arch-manager/internal/config"
+	"github.com/ebadidev/arch-manager/internal/database"
+	"github.com/labstack/echo/v4"
 )
 
 func Profile(config *config.Config, d *database.Database) echo.HandlerFunc {

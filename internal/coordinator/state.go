@@ -1,8 +1,9 @@
 package coordinator
 
 import (
-	"github.com/miladrahimi/p-manager/internal/utils"
 	"time"
+
+	"github.com/ebadidev/arch-manager/internal/utils"
 )
 
 const DefaultXraySharedPassword = "1N92QegUGpI4rX9Q7Tyc6E8UsKX+0C4yjq84jyBc+e4="

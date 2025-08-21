@@ -6,7 +6,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: miladrahimi/p-manager
+  IMAGE_NAME: ebadidev/arch-manager
   TAG: latest
 
 jobs:

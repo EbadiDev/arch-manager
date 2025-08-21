@@ -3,17 +3,18 @@ package database
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/cockroachdb/errors"
-	"github.com/go-playground/validator/v10"
-	"github.com/labstack/gommon/random"
-	"github.com/miladrahimi/p-manager/internal/config"
-	"github.com/miladrahimi/p-manager/internal/utils"
-	"github.com/miladrahimi/p-node/pkg/logger"
-	"go.uber.org/zap"
 	"os"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/cockroachdb/errors"
+	"github.com/ebadidev/arch-manager/internal/config"
+	"github.com/ebadidev/arch-manager/internal/utils"
+	"github.com/ebadidev/arch-node/pkg/logger"
+	"github.com/go-playground/validator/v10"
+	"github.com/labstack/gommon/random"
+	"go.uber.org/zap"
 )
 
 type Content struct {

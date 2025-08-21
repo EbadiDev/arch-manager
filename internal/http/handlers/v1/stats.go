@@ -2,13 +2,14 @@ package v1
 
 import (
 	"fmt"
-	"github.com/cockroachdb/errors"
-	"github.com/go-playground/validator/v10"
-	"github.com/labstack/echo/v4"
-	"github.com/miladrahimi/p-manager/internal/database"
-	"github.com/miladrahimi/p-manager/internal/utils"
 	"net/http"
 	"time"
+
+	"github.com/cockroachdb/errors"
+	"github.com/ebadidev/arch-manager/internal/database"
+	"github.com/ebadidev/arch-manager/internal/utils"
+	"github.com/go-playground/validator/v10"
+	"github.com/labstack/echo/v4"
 )
 
 type StatsUpdatePartialRequest struct {

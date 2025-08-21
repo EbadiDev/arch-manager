@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="robots" content="noindex,nofollow">
-    <title>P-Manager</title>
+    <title>Arch-Manager</title>
     <link rel="stylesheet" href="assets/third_party/bootstrap-5.3.5/css/bootstrap.min.css">
     <link rel="stylesheet" href="assets/third_party/tabulator-6.3.1/dist/css/tabulator.min.css">
     <link rel="stylesheet" href="assets/third_party/tabulator-6.3.1/dist/css/tabulator_semanticui.min.css">
@@ -144,7 +144,7 @@
                         <td class="align-middle px-2">
                             Shadowsocks Direct Port
                             <span class="badge bg-secondary-subtle" data-bs-toggle="tooltip" data-bs-placement="top"
-                                  data-bs-title="It makes a standalone proxy without using P-Nodes.">
+                                  data-bs-title="It makes a standalone proxy without using Arch-Nodes.">
                                 ?
                             </span>
                         </td>
@@ -159,7 +159,7 @@
                         <td class="align-middle px-2">
                             Shadowsocks Relay Port
                             <span class="badge bg-secondary-subtle" data-bs-toggle="tooltip" data-bs-placement="top"
-                                  data-bs-title="It makes a bridge and forwards connections to the P-Nodes.">
+                                  data-bs-title="It makes a bridge and forwards connections to the Arch-Nodes.">
                                 ?
                             </span>
                         </td>
@@ -175,7 +175,7 @@
                         <td class="align-middle px-2">
                             Shadowsocks Reverse Port
                             <span class="badge bg-secondary-subtle" data-bs-toggle="tooltip" data-bs-placement="top"
-                                  data-bs-title="It makes a bridge and starts connections from the P-Nodes.">
+                                  data-bs-title="It makes a bridge and starts connections from the Arch-Nodes.">
                                 ?
                             </span>
                         </td>
@@ -191,7 +191,7 @@
                         <td class="align-middle px-2">
                             Shadowsocks Remote Port
                             <span class="badge bg-secondary-subtle" data-bs-toggle="tooltip" data-bs-placement="top"
-                                  data-bs-title="It makes standalone proxies from the P-Nodes.">
+                                  data-bs-title="It makes standalone proxies from the Arch-Nodes.">
                                 ?
                             </span>
                         </td>
@@ -236,7 +236,7 @@
                     </tr>
                     <tr>
                         <td class="align-middle px-2">
-                            <a href="https://github.com/miladrahimi/singet" target="_blank">Singet</a> Server
+                            <a href="https://github.com/ebadidev/singet" target="_blank">Singet</a> Server
                             <span class="badge bg-secondary-subtle" data-bs-toggle="tooltip" data-bs-placement="top"
                                   data-bs-title="A tiny proxy used for communication with blocked nodes.">
                                 ?
@@ -256,7 +256,7 @@
         </div>
 
         <div class="card bg-light pt-3 mt-3">
-            <div class="card-title fw-bold text-center">Import users from another P-Manager</div>
+            <div class="card-title fw-bold text-center">Import users from another Arch-Manager</div>
             <form class="card-body text-start">
                 <div class="d-flex flex-column mt-2">
                     <input type="url" placeholder="https://domain-or-ip" id="import-url" title="URL"
@@ -508,7 +508,7 @@
             }),
             complete: () => me.removeAttr('disabled'),
             success: response => {
-                console.log('Import from P-Manager: Import Users', response)
+                console.log('Import from Arch-Manager: Import Users', response)
                 $('#import-url').val('')
                 $('#import-password').val('')
                 alert('Users imported successfully, See the results in your console.')

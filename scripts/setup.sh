@@ -41,7 +41,7 @@ git config pull.rebase false
 chmod 0777 "$ROOT/storage"
 
 # Validate the binary file
-BINARY_PATH="$ROOT/p-manager"
+BINARY_PATH="$ROOT/arch-manager"
 if [ ! -f "$BINARY_PATH" ]; then
     echo "Binary not found at $BINARY_PATH"
     exit 1

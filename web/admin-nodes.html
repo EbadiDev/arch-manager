@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="robots" content="noindex,nofollow">
-    <title>P-Manager</title>
+    <title>Arch-Manager</title>
     <link rel="stylesheet" href="assets/third_party/bootstrap-5.3.5/css/bootstrap.min.css">
     <link rel="stylesheet" href="assets/third_party/tabulator-6.3.1/dist/css/tabulator.min.css">
     <link rel="stylesheet" href="assets/third_party/tabulator-6.3.1/dist/css/tabulator_semanticui.min.css">
@@ -37,9 +37,9 @@
         <div id="table" class="celled striped very compact"></div>
 
         <div class="btn btn-dark btn-sm d-block" id="create">+ Add Node</div>
-        <a class="btn btn-outline-dark btn-sm d-block mt-1" href="https://github.com/miladrahimi/p-node"
+        <a class="btn btn-outline-dark btn-sm d-block mt-1" href="https://github.com/ebadidev/arch-node"
            target="_blank">
-            P-Node GitHub
+            Arch-Node GitHub
         </a>
     </div>
 </div>
@@ -171,11 +171,11 @@
             },
             {
                 title: "Push Status", field: "push_status", widthGrow: 1, resizable: true, formatter: statusFormatter,
-                headerPopup: "Status of the process where P-Manager pushes configurations to P-Nodes.",
+                headerPopup: "Status of the process where Arch-Manager pushes configurations to Arch-Nodes.",
             },
             {
                 title: "Pull Status", field: "pull_status", widthGrow: 1, resizable: true, formatter: statusFormatter,
-                headerPopup: "Status of the process where P-Nodes pull configurations from the P-Manager.",
+                headerPopup: "Status of the process where Arch-Nodes pull configurations from the Arch-Manager.",
             },
             {
                 title: "Actions", formatter: actionsFormatter, hozAlign: "right",

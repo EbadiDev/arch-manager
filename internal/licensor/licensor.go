@@ -3,16 +3,17 @@ package licensor
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/cockroachdb/errors"
-	"github.com/miladrahimi/p-manager/internal/config"
-	"github.com/miladrahimi/p-manager/internal/database"
-	"github.com/miladrahimi/p-manager/internal/enigma"
-	"github.com/miladrahimi/p-manager/internal/http/client"
-	"github.com/miladrahimi/p-manager/internal/utils"
-	"github.com/miladrahimi/p-node/pkg/logger"
-	"go.uber.org/zap"
 	"net/http"
 	"os"
+
+	"github.com/cockroachdb/errors"
+	"github.com/ebadidev/arch-manager/internal/config"
+	"github.com/ebadidev/arch-manager/internal/database"
+	"github.com/ebadidev/arch-manager/internal/enigma"
+	"github.com/ebadidev/arch-manager/internal/http/client"
+	"github.com/ebadidev/arch-manager/internal/utils"
+	"github.com/ebadidev/arch-node/pkg/logger"
+	"go.uber.org/zap"
 )
 
 type Licensor struct {

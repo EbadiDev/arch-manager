@@ -2,18 +2,19 @@ package v1
 
 import (
 	"fmt"
-	"github.com/cockroachdb/errors"
-	"github.com/go-playground/validator/v10"
-	"github.com/labstack/echo/v4"
-	"github.com/miladrahimi/p-manager/internal/config"
-	"github.com/miladrahimi/p-manager/internal/coordinator"
-	"github.com/miladrahimi/p-manager/internal/database"
-	"github.com/miladrahimi/p-manager/internal/licensor"
-	"github.com/miladrahimi/p-manager/internal/utils"
 	"net/http"
 	"slices"
 	"strconv"
 	"time"
+
+	"github.com/cockroachdb/errors"
+	"github.com/ebadidev/arch-manager/internal/config"
+	"github.com/ebadidev/arch-manager/internal/coordinator"
+	"github.com/ebadidev/arch-manager/internal/database"
+	"github.com/ebadidev/arch-manager/internal/licensor"
+	"github.com/ebadidev/arch-manager/internal/utils"
+	"github.com/go-playground/validator/v10"
+	"github.com/labstack/echo/v4"
 )
 
 type UsersStoreRequest struct {

@@ -1,6 +1,6 @@
-# P-Manager License
+# Arch-Manager License
 
-This license applies to the P-Manager ("Project").
+This license applies to the Arch-Manager ("Project").
 The Project is licensed under the following terms:
 
 ## User Rights and Restrictions

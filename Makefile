@@ -8,7 +8,7 @@ local-run:
 
 .PHONY: build
 build:
-	@GOOS=linux GOARCH=amd64 go build -o p-manager
+	@GOOS=linux GOARCH=amd64 go build -o arch-manager
 
 .PHONY: setup
 setup:

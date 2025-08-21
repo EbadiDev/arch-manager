@@ -3,13 +3,14 @@ package v1
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/cockroachdb/errors"
-	"github.com/go-playground/validator/v10"
-	"github.com/labstack/echo/v4"
-	"github.com/miladrahimi/p-manager/internal/database"
-	"github.com/miladrahimi/p-manager/internal/http/client"
 	"net/http"
 	"slices"
+
+	"github.com/cockroachdb/errors"
+	"github.com/ebadidev/arch-manager/internal/database"
+	"github.com/ebadidev/arch-manager/internal/http/client"
+	"github.com/go-playground/validator/v10"
+	"github.com/labstack/echo/v4"
 )
 
 type SettingsImportPManagerRequest struct {

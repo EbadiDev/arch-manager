@@ -3,11 +3,12 @@ package v1
 import (
 	"encoding/base64"
 	"fmt"
-	"github.com/cockroachdb/errors"
-	"github.com/labstack/echo/v4"
-	"github.com/miladrahimi/p-manager/internal/coordinator"
-	"github.com/miladrahimi/p-manager/internal/database"
 	"net/http"
+
+	"github.com/cockroachdb/errors"
+	"github.com/ebadidev/arch-manager/internal/coordinator"
+	"github.com/ebadidev/arch-manager/internal/database"
+	"github.com/labstack/echo/v4"
 )
 
 type ProfileResponse struct {

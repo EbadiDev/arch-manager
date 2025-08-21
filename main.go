@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"github.com/miladrahimi/p-manager/cmd"
+	"github.com/ebadidev/arch-manager/cmd"
 	"os"
 )
 

@@ -1,4 +1,4 @@
-# P-Manager
+# Arch-Manager
 
 ## Documentation
 
@@ -19,11 +19,11 @@ echo "net.ipv4.tcp_congestion_control=bbr" >> /etc/sysctl.conf
 sysctl -p
 ```
 
-3. Install P-Manager
+3. Install Arch-Manager
 
 ```shell
-git clone https://github.com/miladrahimi/p-manager.git
-cd p-manager
+git clone https://github.com/ebadidev/arch-manager.git
+cd arch-manager
 make setup
 ```
 
@@ -39,7 +39,7 @@ Access the admin panel at the default port `8080`.
 #### Tabs
 
 * `Users`: Manage users and view their public profiles
-* `Servers`: Manage P-Nodes
+* `Servers`: Manage Arch-Nodes
 * `Settings`: Modify general settings
 * `Exit`: Sign out of the admin panel
 
@@ -51,7 +51,7 @@ You can customize the web panel port and additional settings by modifying the co
 configs/main.json
 ```
 
-It requires `systemctl restart p-manager` to apply changes.
+It requires `systemctl restart arch-manager` to apply changes.
 
 ### Update
 
@@ -64,19 +64,19 @@ make update
 
 ### Status and Logs
 
-The application service is named after its directory, with `p-manager` as the default in `systemd`.
-It allows running multiple instances on a single server by placing the application in different directories with different names (like `p-manager-2` and `p-manager-3`).
+The application service is named after its directory, with `arch-manager` as the default in `systemd`.
+It allows running multiple instances on a single server by placing the application in different directories with different names (like `arch-manager-2` and `arch-manager-3`).
 
 To check the status of the application, execute the following command:
 
 ```shell
-systemctl status p-manager
+systemctl status arch-manager
 ```
 
 To view the application's standard outputs, execute the command below:
 
 ```shell
-journalctl -f -u p-manager
+journalctl -f -u arch-manager
 ```
 
 The application logs will be stored in the following directory:
@@ -113,7 +113,7 @@ You can manually stop the application service, replace the backup file with `./s
 
 ## Links
 
-* [P-Node](https://github.com/miladrahimi/p-node)
+* [Arch-Node](https://github.com/ebadidev/arch-node)
 
 ## License
 

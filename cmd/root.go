@@ -2,13 +2,14 @@ package cmd
 
 import (
 	"fmt"
-	c "github.com/miladrahimi/p-manager/internal/config"
-	"github.com/spf13/cobra"
 	r "runtime"
+
+	c "github.com/ebadidev/arch-manager/internal/config"
+	"github.com/spf13/cobra"
 )
 
 var rootCmd = &cobra.Command{
-	Use: "p-manager",
+	Use: "arch-manager",
 }
 
 func init() {

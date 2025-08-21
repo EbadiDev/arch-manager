@@ -1,9 +1,10 @@
 package v1
 
 import (
-	"github.com/labstack/echo/v4"
-	"github.com/miladrahimi/p-manager/internal/database"
 	"net/http"
+
+	"github.com/ebadidev/arch-manager/internal/database"
+	"github.com/labstack/echo/v4"
 )
 
 func InsightsIndex(d *database.Database) echo.HandlerFunc {

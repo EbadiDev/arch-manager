@@ -3,14 +3,15 @@ package config
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/cockroachdb/errors"
-	"github.com/go-playground/validator/v10"
-	"github.com/miladrahimi/p-manager/internal/utils"
 	"os"
+
+	"github.com/cockroachdb/errors"
+	"github.com/ebadidev/arch-manager/internal/utils"
+	"github.com/go-playground/validator/v10"
 )
 
-const AppName = "P-Manager"
-const AppVersion = "v0.8.33"
+const AppName = "Arch-Manager"
+const AppVersion = "v25.8.21"
 const XrayCoreVersion = "Xray v25.8.3"
 
 const ShadowsocksMethod = "chacha20-ietf-poly1305"
@@ -19,7 +20,7 @@ const Shadowsocks2022Method = "2022-blake3-aes-128-gcm"
 const FreeUsersCount = 16
 const MaxUsersCount = 1024
 
-const LicenseServer = "https://x.miladrahimi.com/p-manager/v1/servers"
+const LicenseServer = "https://x.ebadidev.com/arch-manager/v1/servers"
 const LicenseToken = "Unauthorized"
 
 type Config struct {

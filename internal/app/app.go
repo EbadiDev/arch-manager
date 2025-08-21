@@ -2,21 +2,22 @@ package app
 
 import (
 	"context"
-	"github.com/cockroachdb/errors"
-	"github.com/miladrahimi/p-manager/internal/config"
-	"github.com/miladrahimi/p-manager/internal/coordinator"
-	"github.com/miladrahimi/p-manager/internal/database"
-	"github.com/miladrahimi/p-manager/internal/enigma"
-	"github.com/miladrahimi/p-manager/internal/http/client"
-	"github.com/miladrahimi/p-manager/internal/http/server"
-	"github.com/miladrahimi/p-manager/internal/licensor"
-	"github.com/miladrahimi/p-manager/internal/writer"
-	"github.com/miladrahimi/p-node/pkg/logger"
-	"github.com/miladrahimi/p-node/pkg/xray"
-	"go.uber.org/zap"
 	"os"
 	"os/signal"
 	"syscall"
+
+	"github.com/cockroachdb/errors"
+	"github.com/ebadidev/arch-manager/internal/config"
+	"github.com/ebadidev/arch-manager/internal/coordinator"
+	"github.com/ebadidev/arch-manager/internal/database"
+	"github.com/ebadidev/arch-manager/internal/enigma"
+	"github.com/ebadidev/arch-manager/internal/http/client"
+	"github.com/ebadidev/arch-manager/internal/http/server"
+	"github.com/ebadidev/arch-manager/internal/licensor"
+	"github.com/ebadidev/arch-manager/internal/writer"
+	"github.com/ebadidev/arch-node/pkg/logger"
+	"github.com/ebadidev/arch-node/pkg/xray"
+	"go.uber.org/zap"
 )
 
 type App struct {

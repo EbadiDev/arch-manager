@@ -1,14 +1,15 @@
 package v1
 
 import (
-	"github.com/cockroachdb/errors"
-	"github.com/labstack/echo/v4"
-	"github.com/miladrahimi/p-manager/internal/coordinator"
-	"github.com/miladrahimi/p-manager/internal/database"
-	"github.com/miladrahimi/p-manager/internal/writer"
 	"net/http"
 	"strconv"
 	"time"
+
+	"github.com/cockroachdb/errors"
+	"github.com/ebadidev/arch-manager/internal/coordinator"
+	"github.com/ebadidev/arch-manager/internal/database"
+	"github.com/ebadidev/arch-manager/internal/writer"
+	"github.com/labstack/echo/v4"
 )
 
 func NodesConfigsShow(cdr *coordinator.Coordinator, writer *writer.Writer, d *database.Database) echo.HandlerFunc {

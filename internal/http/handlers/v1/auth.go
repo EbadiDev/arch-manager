@@ -1,11 +1,12 @@
 package v1
 
 import (
-	"github.com/labstack/echo/v4"
-	"github.com/miladrahimi/p-manager/internal/database"
-	"github.com/miladrahimi/p-manager/internal/enigma"
 	"net/http"
 	"time"
+
+	"github.com/ebadidev/arch-manager/internal/database"
+	"github.com/ebadidev/arch-manager/internal/enigma"
+	"github.com/labstack/echo/v4"
 )
 
 type SignInRequest struct {
