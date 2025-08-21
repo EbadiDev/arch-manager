@@ -1,0 +1,9 @@
+.idea
+third_party/xray-linux-64
+third_party/xray-macos-arm64
+third_party/*.zip
+
+.DS_Store
+.env
+configs/main.json
+configs/main.local.json
