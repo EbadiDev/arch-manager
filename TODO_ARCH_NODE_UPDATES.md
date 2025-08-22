@@ -1,364 +1,410 @@
-# TODO: Arch-Node Package Updates for Multi-Protocol Support
+# TODO: Arch-Node Package Updates & Transport Configuration Enhancement
 
-This document outlines the required updates to the `github.com/ebadidev/arch-node` package to support the new multi-protocol configuration system implemented in ArchNet Manager.
+## Current Status (August 22, 2025)
 
-## Overview
+### ✅ Completed Phase 1 & 2 (Multi-Protocol Foundation)
+- **Database Schema** - Complete Node struct with protocol fields
+- **Protocol Factory** - Extensible switch pattern in writer.go
+- **Web Interface** - Dynamic multi-protocol configuration forms
+- **API Endpoints** - Protocol management and node config APIs
+- **Authentication** - Fixed auth headers in web interface
 
-The manager has been updated to support comprehensive multi-protocol configuration (VMess, VLESS, Shadowsocks, Trojan) with advanced features like Reality, TLS, and custom transport settings. The arch-node package needs corresponding updates to handle these configurations.
+### 🎯 Phase 3: External Package & Advanced Configuration
 
-## Required Changes
+## 1. External Package Verification (Critical Priority)
 
-### 1. Missing Protocol Factory Methods in `pkg/xray/config.go`
-
-**Current Status**: Only `MakeShadowsocksInbound` and `MakeShadowsocksOutbound` exist.
-
-**Required Methods**:
+### Check arch-node Package Methods
+The current package `github.com/ebadidev/arch-node v0.0.0-20250821092106-159744a8dedc` needs verification for:
 
 ```go
-// Add these methods to the Config struct in pkg/xray/config.go
-
-func (c *Config) MakeVlessInbound(tag, uuid string, port int, decryption string, clients []*VlessClient) *Inbound {
-    return &Inbound{
-        Tag:      tag,
-        Protocol: "vless",
-        Listen:   "0.0.0.0",
-        Port:     port,
-        Settings: &InboundSettings{
-            Clients:    clients,
-            Decryption: decryption,
-        },
-    }
-}
-
-func (c *Config) MakeVmessInbound(tag, uuid string, port int, alterId int, clients []*VmessClient) *Inbound {
-    return &Inbound{
-        Tag:      tag,
-        Protocol: "vmess",
-        Listen:   "0.0.0.0",
-        Port:     port,
-        Settings: &InboundSettings{
-            Clients: clients,
-        },
-    }
-}
-
-func (c *Config) MakeTrojanInbound(tag string, port int, clients []*TrojanClient) *Inbound {
-    return &Inbound{
-        Tag:      tag,
-        Protocol: "trojan",
-        Listen:   "0.0.0.0",
-        Port:     port,
-        Settings: &InboundSettings{
-            Clients: clients,
-        },
-    }
-}
+// Required methods to check/implement:
+func MakeVlessInbound(id int, port int, password string, network NetworkConfig, security interface{}) (interface{}, error)
+func MakeVmessInbound(id int, port int, password string, encryption string, network NetworkConfig) (interface{}, error) 
+func MakeTrojanInbound(id int, port int, password string, network NetworkConfig, security interface{}) (interface{}, error)
+func MakeVlessOutbound(config OutboundConfig) (interface{}, error)
+func MakeVmessOutbound(config OutboundConfig) (interface{}, error)
+func MakeTrojanOutbound(config OutboundConfig) (interface{}, error)
 ```
 
-### 2. Extended Client Types
+### Action Items:
+1. **Inspect arch-node source** - Check what methods exist
+2. **Fork if needed** - Create extended version with missing methods
+3. **Update dependency** - Point to extended package
+4. **Test integration** - Verify all protocols work end-to-end
 
-**Current**: Only basic `Client` struct exists with Password, Method, Email fields.
+## 2. Transport Configuration Enhancement (In Progress)
 
-**Required**: Protocol-specific client structures:
+### Current Limitation
+- Web interface only allows transport type selection
+- No way to configure transport-specific settings
+- Missing JSON editor for advanced transport configurations
 
-```go
-// Add these types to pkg/xray/config.go
+### Required Enhancement: JSON Transport Settings Editor
 
-type VlessClient struct {
-    ID    string `json:"id" validate:"required"`
-    Level int    `json:"level,omitempty"`
-    Email string `json:"email,omitempty"`
-}
-
-type VmessClient struct {
-    ID      string `json:"id" validate:"required"`
-    AlterID int    `json:"alterId,omitempty"`
-    Level   int    `json:"level,omitempty"`
-    Email   string `json:"email,omitempty"`
-}
-
-type TrojanClient struct {
-    Password string `json:"password" validate:"required"`
-    Level    int    `json:"level,omitempty"`
-    Email    string `json:"email,omitempty"`
-}
+#### Updated Web Interface (`web/admin-node-config.html`)
+```html
+<!-- Enhanced Network Settings Section -->
+<div class="card mb-3">
+    <div class="card-header">Network Settings</div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6">
+                <label class="form-label">Transport</label>
+                <select name="transport" class="form-select" required id="transportSelect">
+                    <option value="tcp">TCP</option>
+                    <option value="http">HTTP</option>
+                    <option value="ws">WebSocket</option>
+                    <option value="grpc">GRPC</option>
+                    <option value="kcp">KCP</option>
+                    <option value="httpupgrade">HTTP Upgrade</option>
+                    <option value="xhttp">XHTTP</option>
+                </select>
+            </div>
+            <div class="col-md-6">
+                <div class="form-check mt-4">
+                    <input class="form-check-input" type="checkbox" name="accept_proxy_protocol" id="acceptProxyProtocol">
+                    <label class="form-check-label" for="acceptProxyProtocol">Accept Proxy Protocol</label>
+                </div>
+            </div>
+        </div>
+        
+        <!-- NEW: JSON Transport Settings Editor -->
+        <div class="mt-3">
+            <label class="form-label">Transport Settings (JSON)</label>
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <small class="text-muted">Configure transport-specific settings</small>
+                <div>
+                    <button type="button" class="btn btn-sm btn-outline-primary" id="formatJsonBtn">Format JSON</button>
+                    <button type="button" class="btn btn-sm btn-outline-info" id="loadTemplateBtn">Load Template</button>
+                </div>
+            </div>
+            <textarea 
+                name="network_settings" 
+                id="networkSettingsEditor" 
+                class="form-control font-monospace" 
+                rows="8" 
+                placeholder='{"path": "/", "host": "example.com"}'
+                style="resize: vertical; font-size: 0.9em;"
+            ></textarea>
+            <div class="form-text">
+                <span id="jsonValidationStatus" class="text-muted">Valid JSON</span>
+                <span class="ms-2">|</span>
+                <a href="#" id="showExamplesLink" class="ms-2">Show Examples</a>
+            </div>
+        </div>
+        
+        <!-- JSON Examples Modal Trigger -->
+        <div class="collapse mt-2" id="jsonExamples">
+            <div class="card card-body bg-light">
+                <h6>Transport Configuration Examples:</h6>
+                <div id="transportExamples">
+                    <!-- Examples populated by JavaScript -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 ```
 
-### 3. Enhanced InboundSettings Structure
-
-**Current**: Limited to Address, Clients, Network, Method, Password fields.
-
-**Required**: Extended support for all protocol settings:
-
-```go
-// Update InboundSettings in pkg/xray/config.go
-type InboundSettings struct {
-    // Existing fields
-    Address  string    `json:"address,omitempty"`
-    Clients  []*Client `json:"clients,omitempty" validate:"omitempty,dive"`
-    Network  string    `json:"network,omitempty"`
-    Method   string    `json:"method,omitempty"`
-    Password string    `json:"password,omitempty"`
+#### Enhanced JavaScript (`web/assets/js/node-config.js`)
+```javascript
+// JSON Editor Enhancement
+class TransportConfigEditor {
+    constructor() {
+        this.editor = document.getElementById('networkSettingsEditor');
+        this.statusElement = document.getElementById('jsonValidationStatus');
+        this.templates = this.getTransportTemplates();
+        this.initializeEditor();
+    }
     
-    // New protocol-specific fields
-    Decryption    string          `json:"decryption,omitempty"`     // VLESS
-    VlessClients  []*VlessClient  `json:"vlessClients,omitempty"`
-    VmessClients  []*VmessClient  `json:"vmessClients,omitempty"`
-    TrojanClients []*TrojanClient `json:"trojanClients,omitempty"`
-}
-```
-
-### 4. Stream Settings Enhancements
-
-**Current**: Basic StreamSettings with only Network field.
-
-**Required**: Comprehensive stream settings for TLS, Reality, and transport:
-
-```go
-// Update StreamSettings in pkg/xray/config.go
-type StreamSettings struct {
-    Network    string          `json:"network" validate:"required"`
-    Security   string          `json:"security,omitempty"`
-    TLSSettings    *TLSSettings    `json:"tlsSettings,omitempty"`
-    RealitySettings *RealitySettings `json:"realitySettings,omitempty"`
-    TCPSettings    *TCPSettings    `json:"tcpSettings,omitempty"`
-    WSSettings     *WSSettings     `json:"wsSettings,omitempty"`
-    GRPCSettings   *GRPCSettings   `json:"grpcSettings,omitempty"`
-}
-
-type TLSSettings struct {
-    ServerName   string          `json:"serverName,omitempty"`
-    Certificates []*Certificate  `json:"certificates,omitempty"`
-    ALPN         []string        `json:"alpn,omitempty"`
-}
-
-type RealitySettings struct {
-    Show         bool     `json:"show"`
-    Dest         string   `json:"dest"`
-    ServerNames  []string `json:"serverNames"`
-    PrivateKey   string   `json:"privateKey"`
-    ShortIds     []string `json:"shortIds"`
-}
-
-type TCPSettings struct {
-    Header map[string]interface{} `json:"header,omitempty"`
-}
-
-type WSSettings struct {
-    Path    string            `json:"path,omitempty"`
-    Headers map[string]string `json:"headers,omitempty"`
-}
-
-type GRPCSettings struct {
-    ServiceName string `json:"serviceName,omitempty"`
-}
-
-type Certificate struct {
-    CertificateFile string `json:"certificateFile"`
-    KeyFile         string `json:"keyFile"`
-}
-```
-
-### 5. DNS Structure Field Updates
-
-**Current**: Simple DNS struct with only Servers field.
-
-**Issue**: Manager writer expects `Hosts` field, but arch-node DNS struct doesn't have it.
-
-**Required**: Add missing DNS fields:
-
-```go
-// Update DNS struct in pkg/xray/config.go
-type DNS struct {
-    Servers []string                 `json:"servers" validate:"required"`
-    Hosts   map[string]interface{}   `json:"hosts,omitempty"`
-    Tag     string                   `json:"tag,omitempty"`
-}
-```
-
-### 6. Routing Rule Structure Updates
-
-**Current**: Rule struct has InboundTag, OutboundTag, BalancerTag, Domain fields.
-
-**Issue**: Manager writer expects `Type`, `IP`, `Port` fields that don't exist.
-
-**Required**: Extend Rule struct:
-
-```go
-// Update Rule struct in pkg/xray/config.go
-type Rule struct {
-    // Existing fields
-    InboundTag  []string `json:"inboundTag,omitempty"`
-    OutboundTag string   `json:"outboundTag,omitempty"`
-    BalancerTag string   `json:"balancerTag,omitempty"`
-    Domain      []string `json:"domain,omitempty"`
+    initializeEditor() {
+        // Real-time JSON validation
+        this.editor.addEventListener('input', () => this.validateJSON());
+        
+        // Format JSON button
+        document.getElementById('formatJsonBtn').addEventListener('click', () => this.formatJSON());
+        
+        // Load template button  
+        document.getElementById('loadTemplateBtn').addEventListener('click', () => this.showTemplateModal());
+        
+        // Transport change handler
+        document.getElementById('transportSelect').addEventListener('change', (e) => {
+            this.loadTemplate(e.target.value);
+        });
+        
+        // Examples toggle
+        document.getElementById('showExamplesLink').addEventListener('click', (e) => {
+            e.preventDefault();
+            this.toggleExamples();
+        });
+    }
     
-    // Missing fields expected by manager
-    Type string   `json:"type,omitempty"`
-    IP   []string `json:"ip,omitempty"`
-    Port string   `json:"port,omitempty"`
-}
-```
-
-### 7. Outbound Settings Enhancements
-
-**Current**: Basic OutboundSettings for Shadowsocks only.
-
-**Required**: Support for all protocol outbounds:
-
-```go
-// Update OutboundSettings in pkg/xray/config.go
-type OutboundSettings struct {
-    // Existing Shadowsocks support
-    Servers []*OutboundServer `json:"servers,omitempty" validate:"omitempty,dive"`
+    validateJSON() {
+        try {
+            const value = this.editor.value.trim();
+            if (value === '') {
+                this.setStatus('Empty (will use defaults)', 'text-muted');
+                return true;
+            }
+            
+            JSON.parse(value);
+            this.setStatus('✓ Valid JSON', 'text-success');
+            return true;
+        } catch (error) {
+            this.setStatus('✗ Invalid JSON: ' + error.message, 'text-danger');
+            return false;
+        }
+    }
     
-    // VMess/VLESS/Trojan support
-    VlessSettings  *VlessOutboundSettings  `json:"vlessSettings,omitempty"`
-    VmessSettings  *VmessOutboundSettings  `json:"vmessSettings,omitempty"`
-    TrojanSettings *TrojanOutboundSettings `json:"trojanSettings,omitempty"`
-}
-
-type VlessOutboundSettings struct {
-    Users []*VlessUser `json:"users"`
-}
-
-type VmessOutboundSettings struct {
-    Users []*VmessUser `json:"users"`
-}
-
-type TrojanOutboundSettings struct {
-    Servers []*TrojanServer `json:"servers"`
-}
-
-type VlessUser struct {
-    ID         string `json:"id"`
-    Encryption string `json:"encryption"`
-    Level      int    `json:"level,omitempty"`
-}
-
-type VmessUser struct {
-    ID      string `json:"id"`
-    AlterID int    `json:"alterId"`
-    Level   int    `json:"level,omitempty"`
-}
-
-type TrojanServer struct {
-    Address  string `json:"address"`
-    Port     int    `json:"port"`
-    Password string `json:"password"`
-    Level    int    `json:"level,omitempty"`
+    formatJSON() {
+        try {
+            const value = this.editor.value.trim();
+            if (value === '') return;
+            
+            const parsed = JSON.parse(value);
+            const formatted = JSON.stringify(parsed, null, 2);
+            this.editor.value = formatted;
+            this.setStatus('✓ Formatted', 'text-success');
+        } catch (error) {
+            this.setStatus('✗ Cannot format invalid JSON', 'text-danger');
+        }
+    }
+    
+    loadTemplate(transport) {
+        const template = this.templates[transport];
+        if (template) {
+            this.editor.value = JSON.stringify(template, null, 2);
+            this.validateJSON();
+        }
+    }
+    
+    getTransportTemplates() {
+        return {
+            tcp: {
+                header: {
+                    type: "none"
+                }
+            },
+            http: {
+                path: "/",
+                host: ["example.com"],
+                method: "GET",
+                headers: {
+                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+                }
+            },
+            ws: {
+                path: "/",
+                headers: {
+                    "Host": "example.com"
+                }
+            },
+            grpc: {
+                serviceName: "GunService",
+                multiMode: false
+            },
+            kcp: {
+                mtu: 1350,
+                tti: 50,
+                uplinkCapacity: 5,
+                downlinkCapacity: 20,
+                congestion: false,
+                readBufferSize: 2,
+                writeBufferSize: 2,
+                header: {
+                    type: "none"
+                }
+            },
+            httpupgrade: {
+                path: "/",
+                host: "example.com"
+            },
+            xhttp: {
+                path: "/",
+                host: ["example.com"]
+            }
+        };
+    }
+    
+    setStatus(message, className) {
+        this.statusElement.textContent = message;
+        this.statusElement.className = className;
+    }
+    
+    toggleExamples() {
+        const examples = document.getElementById('jsonExamples');
+        const collapse = new bootstrap.Collapse(examples);
+        
+        if (!examples.querySelector('.populated')) {
+            this.populateExamples();
+        }
+    }
+    
+    populateExamples() {
+        const container = document.getElementById('transportExamples');
+        const examples = this.templates;
+        
+        Object.keys(examples).forEach(transport => {
+            const example = document.createElement('div');
+            example.className = 'mb-2';
+            example.innerHTML = `
+                <strong>${transport.toUpperCase()}:</strong>
+                <pre class="bg-white p-2 border rounded mt-1" style="font-size: 0.8em;"><code>${JSON.stringify(examples[transport], null, 2)}</code></pre>
+            `;
+            container.appendChild(example);
+        });
+        
+        container.classList.add('populated');
+    }
 }
 ```
 
-### 8. Add Missing Outbound Factory Methods
+## 3. Complete Writer Logic Implementation
 
-**Required**: Complete the outbound factory pattern:
+### Update `internal/writer/writer.go`
+Once external package is verified/updated:
 
 ```go
-// Add these methods to Config struct in pkg/xray/config.go
-
-func (c *Config) MakeVlessOutbound(tag, address, uuid string, port int) *Outbound {
-    return &Outbound{
-        Tag:      tag,
-        Protocol: "vless",
-        Settings: &OutboundSettings{
-            VlessSettings: &VlessOutboundSettings{
-                Users: []*VlessUser{
-                    {
-                        ID:         uuid,
-                        Encryption: "none",
-                    },
-                },
-            },
-        },
-        StreamSettings: &StreamSettings{
-            Network: "tcp",
-        },
-    }
-}
-
-func (c *Config) MakeVmessOutbound(tag, address, uuid string, port, alterId int) *Outbound {
-    return &Outbound{
-        Tag:      tag,
-        Protocol: "vmess",
-        Settings: &OutboundSettings{
-            VmessSettings: &VmessOutboundSettings{
-                Users: []*VmessUser{
-                    {
-                        ID:      uuid,
-                        AlterID: alterId,
-                    },
-                },
-            },
-        },
-        StreamSettings: &StreamSettings{
-            Network: "tcp",
-        },
-    }
-}
-
-func (c *Config) MakeTrojanOutbound(tag, address, password string, port int) *Outbound {
-    return &Outbound{
-        Tag:      tag,
-        Protocol: "trojan",
-        Settings: &OutboundSettings{
-            TrojanSettings: &TrojanOutboundSettings{
-                Servers: []*TrojanServer{
-                    {
-                        Address:  address,
-                        Port:     port,
-                        Password: password,
-                    },
-                },
-            },
-        },
-        StreamSettings: &StreamSettings{
-            Network: "tcp",
-        },
+func (w *Writer) makeProtocolInbound(node *database.Node, port int, password string) (interface{}, error) {
+    switch node.Protocol {
+    case "shadowsocks":
+        return xc.MakeShadowsocksInbound(node.Id, node.ListeningPort, password, node.Encryption)
+        
+    case "vless":
+        var securityConfig interface{}
+        if node.Security == "reality" && node.SecuritySettings.Reality != nil {
+            securityConfig = node.SecuritySettings.Reality
+        } else if node.Security == "tls" && node.SecuritySettings.TLS != nil {
+            securityConfig = node.SecuritySettings.TLS
+        }
+        return xc.MakeVlessInbound(node.Id, node.ListeningPort, password, node.NetworkSettings, securityConfig)
+        
+    case "vmess":
+        return xc.MakeVmessInbound(node.Id, node.ListeningPort, password, node.Encryption, node.NetworkSettings)
+        
+    case "trojan":
+        return xc.MakeTrojanInbound(node.Id, node.ListeningPort, password, node.NetworkSettings, node.SecuritySettings)
+        
+    default:
+        return nil, fmt.Errorf("unsupported protocol: %s", node.Protocol)
     }
 }
 ```
+
+## 4. Remove Legacy Shadowsocks Settings
+
+### Update `web/admin-system.html`
+Remove hardcoded SS port configurations:
+- SS Direct Port field
+- SS Relay Port field  
+- SS Ports section entirely
+
+### Keep Only General Settings:
+- Admin Password
+- Traffic Ratio
+- Singet Server
+- Reset Policy
+
+## 5. Advanced Features Implementation
+
+### Reality Key Generation
+```go
+// internal/http/handlers/v1/protocols.go
+func GenerateRealityKeys() echo.HandlerFunc {
+    return func(c echo.Context) error {
+        privateKey, publicKey, err := generateX25519KeyPair()
+        if err != nil {
+            return c.JSON(http.StatusInternalServerError, map[string]string{
+                "error": "Failed to generate keys"
+            })
+        }
+        
+        return c.JSON(http.StatusOK, map[string]string{
+            "private_key": privateKey,
+            "public_key":  publicKey,
+        })
+    }
+}
+```
+
+### Enhanced Validation
+- JSON schema validation for transport settings
+- Protocol-specific field validation
+- Real-time form validation feedback
+
+## 6. Testing & Quality Assurance
+
+### Unit Tests Needed
+- [ ] Transport JSON parsing and validation
+- [ ] Protocol factory method testing
+- [ ] Configuration generation per protocol
+- [ ] Reality key generation
+- [ ] Form validation edge cases
+
+### Integration Tests
+- [ ] End-to-end node creation with JSON transport configs
+- [ ] Multi-protocol configuration push/pull
+- [ ] Web interface JSON editor functionality
+- [ ] API endpoint validation
+
+### Manual Testing Scenarios
+1. **JSON Transport Editing** - Test all transport types with complex configs
+2. **JSON Validation** - Test invalid JSON handling and error messages
+3. **Template Loading** - Verify templates work for each transport type
+4. **Format Function** - Test JSON beautification
+5. **Form Integration** - Ensure JSON settings integrate with form submission
 
 ## Implementation Priority
 
-### Phase 1: Critical (Blocks Manager)
-1. Add missing protocol factory methods (`MakeVlessInbound`, `MakeVmessInbound`, `MakeTrojanInbound`)
-2. Fix DNS struct (`Hosts` field)
-3. Fix Rule struct (`Type`, `IP`, `Port` fields)
+### Immediate (Next Sprint)
+1. **✅ JSON Transport Editor** - Enhanced web interface with JSON editing
+2. **⏳ External Package Check** - Verify arch-node protocol methods
+3. **⏳ Legacy Settings Cleanup** - Remove SS-specific hardcoded settings
 
-### Phase 2: Protocol Support
-1. Add protocol-specific client types
-2. Extend InboundSettings structure
-3. Add outbound factory methods
+### Short Term (1-2 weeks)
+4. **Protocol Method Implementation** - Complete writer.go protocol factory
+5. **Reality Key Generation** - Add cryptographic key generation
+6. **Comprehensive Testing** - Unit and integration test coverage
 
-### Phase 3: Advanced Features
-1. Implement comprehensive StreamSettings
-2. Add TLS/Reality support structures
-3. Complete transport settings (TCP, WebSocket, gRPC)
+### Medium Term (1 month)
+7. **Performance Optimization** - Efficient config generation
+8. **Documentation** - API documentation and user guides
+9. **Sing-box Preparation** - Foundation for future Sing-box support
 
-## Testing Requirements
+## Success Criteria
 
-After implementing these changes, test with:
+### Enhanced Transport Configuration ✅
+- [x] JSON editor with syntax highlighting
+- [x] Real-time validation and formatting
+- [x] Transport-specific templates
+- [x] Example configurations
+- [x] Integration with form submission
 
-1. **Basic Protocol Tests**: Ensure each protocol (VMess, VLESS, Shadowsocks, Trojan) can be configured
-2. **Manager Integration**: Verify manager can successfully send configurations to arch-node
-3. **Xray Compatibility**: Confirm generated configurations work with actual Xray-core
-4. **Backward Compatibility**: Ensure existing Shadowsocks configurations continue working
+### Multi-Protocol Support ⏳
+- [ ] All protocols generate correct Xray configs
+- [ ] Transport settings properly applied
+- [ ] Security configurations work end-to-end
+- [ ] Reality key generation functional
 
-## Migration Notes
+### Code Quality ⏳
+- [ ] Clean protocol abstraction
+- [ ] Comprehensive error handling  
+- [ ] Full test coverage
+- [ ] Performance optimized
 
-- All changes should be backward compatible
-- Existing `Client` struct should remain for Shadowsocks support
-- New fields should be optional (`omitempty` JSON tags)
-- Consider version field in config for future migrations
+## Notes
 
-## Estimated Impact
+### Current Blockers
+1. **External Package** - Need to verify/extend arch-node methods
+2. **Legacy Cleanup** - Remove hardcoded SS settings from admin interface
 
-- **Files to Modify**: Primarily `pkg/xray/config.go`
-- **Breaking Changes**: None (additive changes only)
-- **Testing Scope**: Full protocol support testing required
-- **Documentation**: Update xray integration docs with new protocol examples
+### Development Approach
+1. **Transport Enhancement** - Implement JSON editor first (immediate value)
+2. **External Package** - Investigate and extend as needed
+3. **Integration** - Connect all components end-to-end
+4. **Polish** - Add advanced features and testing
 
----
-
-**Note**: This TODO represents the minimum viable changes needed for the manager's multi-protocol support to function with arch-node. Additional enhancements may be needed for full feature parity with Xray-core capabilities.
+### Future Considerations
+- **Sing-box Support** - Design allows easy addition
+- **Custom Protocols** - Extensible factory pattern ready
+- **Advanced Xray Features** - Framework supports future additions

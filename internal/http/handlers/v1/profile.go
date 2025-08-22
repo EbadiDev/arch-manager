@@ -33,30 +33,26 @@ func ProfileShow(d *database.Database) echo.HandlerFunc {
 			})
 		}
 
-		r := ProfileResponse{User: *user}
-		r.User.Usage = r.User.Usage * d.Content.Settings.TrafficRatio
-		r.User.Quota = r.User.Quota * d.Content.Settings.TrafficRatio
+	r := ProfileResponse{User: *user}
+	r.User.Usage = r.User.Usage * d.Content.Settings.TrafficRatio
+	r.User.Quota = r.User.Quota * d.Content.Settings.TrafficRatio
 
-		s := d.Content.Settings
-		auth := base64.StdEncoding.EncodeToString([]byte(user.ShadowsocksMethod + ":" + user.ShadowsocksPassword))
+	s := d.Content.Settings
+	auth := base64.StdEncoding.EncodeToString([]byte(user.ShadowsocksMethod + ":" + user.ShadowsocksPassword))
 
-		if s.SsReversePort > 0 {
-			r.SsReverse = fmt.Sprintf("ss://%s@%s:%d#%s", auth, s.Host, s.SsReversePort, "reverse")
-		}
+	// TODO: Replace with per-node configuration when multi-protocol support is fully implemented
+	// For now, using hardcoded ports to maintain backward compatibility
+	reversePort := 8444
+	relayPort := 8443
+	directPort := 8445
+	remotePort := 8446
 
-		if s.SsRelayPort > 0 {
-			r.SsRelay = fmt.Sprintf("ss://%s@%s:%d#%s", auth, s.Host, s.SsRelayPort, "relay")
-		}
+	r.SsReverse = fmt.Sprintf("ss://%s@%s:%d#%s", auth, s.Host, reversePort, "reverse")
+	r.SsRelay = fmt.Sprintf("ss://%s@%s:%d#%s", auth, s.Host, relayPort, "relay")
+	r.SsDirect = fmt.Sprintf("ss://%s@%s:%d#%s", auth, s.Host, directPort, "direct")
+	r.SsRemote = fmt.Sprintf("ss://%s@%s:%d#%s", auth, s.Host, remotePort, "remote")
 
-		if s.SsDirectPort > 0 {
-			r.SsDirect = fmt.Sprintf("ss://%s@%s:%d#%s", auth, s.Host, s.SsDirectPort, "direct")
-		}
-
-		if s.SsRemotePort > 0 {
-			r.SsRemote = fmt.Sprintf("ss://%s@%s:%d#%s", auth, s.Host, s.SsRemotePort, "remote")
-		}
-
-		return c.JSON(http.StatusOK, r)
+	return c.JSON(http.StatusOK, r)
 	}
 }
 

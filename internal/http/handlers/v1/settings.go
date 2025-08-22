@@ -7,7 +7,6 @@ import (
 	"github.com/cockroachdb/errors"
 	"github.com/ebadidev/arch-manager/internal/coordinator"
 	"github.com/ebadidev/arch-manager/internal/database"
-	"github.com/ebadidev/arch-manager/internal/utils"
 	"github.com/go-playground/validator/v10"
 	"github.com/labstack/echo/v4"
 )
@@ -32,31 +31,8 @@ func SettingsUpdate(coordinator *coordinator.Coordinator, d *database.Database) 
 			})
 		}
 
-		if !utils.PortsDistinct([]int{r.SsRelayPort, r.SsReversePort, r.SsDirectPort}) {
-			return c.JSON(http.StatusBadRequest, map[string]string{
-				"message": "Shadowsocks ports must be the distinct.",
-			})
-		}
-
 		d.Locker.Lock()
 		defer d.Locker.Unlock()
-
-		current := d.Content.Settings
-		if r.SsRelayPort > 0 && r.SsRelayPort != current.SsRelayPort && !utils.PortFree(r.SsRelayPort) {
-			return c.JSON(http.StatusBadRequest, map[string]string{
-				"message": fmt.Sprintf("Port %d is already in use.", r.SsRelayPort),
-			})
-		}
-		if r.SsReversePort > 0 && r.SsReversePort != current.SsReversePort && !utils.PortFree(r.SsReversePort) {
-			return c.JSON(http.StatusBadRequest, map[string]string{
-				"message": fmt.Sprintf("Port %d is already in use.", r.SsReversePort),
-			})
-		}
-		if r.SsDirectPort > 0 && r.SsDirectPort != current.SsDirectPort && !utils.PortFree(r.SsDirectPort) {
-			return c.JSON(http.StatusBadRequest, map[string]string{
-				"message": fmt.Sprintf("Port %d is already in use.", r.SsDirectPort),
-			})
-		}
 
 		d.Content.Settings = &r
 

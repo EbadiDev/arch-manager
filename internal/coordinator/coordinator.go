@@ -175,8 +175,8 @@ func (c *Coordinator) syncRemoteConfig(node *database.Node) {
 }
 
 func (c *Coordinator) syncRemoteStats() {
-	if c.d.Content.Settings.SsRemotePort == 0 {
-		c.l.Debug("coordinator: remote stats disabled")
+	if len(c.d.Content.Nodes) == 0 {
+		c.l.Debug("coordinator: no nodes configured, remote stats disabled")
 		return
 	}
 

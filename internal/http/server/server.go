@@ -44,6 +44,9 @@ func (s *Server) Run() {
 
 	s.e.Static("/", "web")
 	s.e.GET("/profile", pages.Profile(s.config, s.database))
+	s.e.GET("/admin/node-config", func(c echo.Context) error {
+		return c.File("web/admin-node-config.html")
+	})
 
 	g1 := s.e.Group("/v1")
 	g1.POST("/sign-in", v1.SignIn(s.database, s.enigma))
@@ -82,6 +85,12 @@ func (s *Server) Run() {
 	g2.POST("/settings/xray/restart", v1.SettingsXrayRestart(s.coordinator))
 
 	g2.POST("/imports", v1.ImportsStore(s.database, s.hc))
+
+	// Protocol management endpoints
+	g2.GET("/protocols", v1.ProtocolsList(s.database))
+	g2.GET("/nodes/:id/config", v1.NodeConfigGet(s.database))
+	g2.PUT("/nodes/:id/config", v1.NodeConfigUpdate(s.database))
+	g2.POST("/generate-reality-keys", v1.GenerateRealityKeys(s.database))
 
 	go func() {
 		address := fmt.Sprintf("%s:%d", s.config.HttpServer.Host, s.config.HttpServer.Port)
