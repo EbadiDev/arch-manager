@@ -2,6 +2,7 @@ package v1
 
 import (
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"net/http"
 
@@ -12,11 +13,17 @@ import (
 )
 
 type ProfileResponse struct {
-	User      database.User `json:"user"`
-	SsDirect  string        `json:"ss_direct"`
-	SsRelay   string        `json:"ss_relay"`
-	SsReverse string        `json:"ss_reverse"`
-	SsRemote  string        `json:"ss_remote"`
+	User        database.User           `json:"user"`
+	Connections []ConnectionInfo        `json:"connections"`
+}
+
+type ConnectionInfo struct {
+	Type        string `json:"type"`        // "direct", "relay", "reverse", "remote"
+	Protocol    string `json:"protocol"`    // "shadowsocks", "vmess", "vless", "trojan"
+	Transport   string `json:"transport"`   // "tcp", "ws", "grpc", "http", etc.
+	Name        string `json:"name"`        // Display name
+	Link        string `json:"link"`        // Connection URL
+	Port        int    `json:"port"`        // Connection port
 }
 
 func ProfileShow(d *database.Database) echo.HandlerFunc {
@@ -33,27 +40,204 @@ func ProfileShow(d *database.Database) echo.HandlerFunc {
 			})
 		}
 
-	r := ProfileResponse{User: *user}
-	r.User.Usage = r.User.Usage * d.Content.Settings.TrafficRatio
-	r.User.Quota = r.User.Quota * d.Content.Settings.TrafficRatio
+		r := ProfileResponse{User: *user}
+		r.User.Usage = r.User.Usage * d.Content.Settings.TrafficRatio
+		r.User.Quota = r.User.Quota * d.Content.Settings.TrafficRatio
 
-	s := d.Content.Settings
-	auth := base64.StdEncoding.EncodeToString([]byte(user.ShadowsocksMethod + ":" + user.ShadowsocksPassword))
+		// Generate connection info based on actual configurations
+		r.Connections = generateConnectionInfo(d, user)
 
-	// TODO: Replace with per-node configuration when multi-protocol support is fully implemented
-	// For now, using hardcoded ports to maintain backward compatibility
-	reversePort := 8444
-	relayPort := 8443
-	directPort := 8445
-	remotePort := 8446
-
-	r.SsReverse = fmt.Sprintf("ss://%s@%s:%d#%s", auth, s.Host, reversePort, "reverse")
-	r.SsRelay = fmt.Sprintf("ss://%s@%s:%d#%s", auth, s.Host, relayPort, "relay")
-	r.SsDirect = fmt.Sprintf("ss://%s@%s:%d#%s", auth, s.Host, directPort, "direct")
-	r.SsRemote = fmt.Sprintf("ss://%s@%s:%d#%s", auth, s.Host, remotePort, "remote")
-
-	return c.JSON(http.StatusOK, r)
+		return c.JSON(http.StatusOK, r)
 	}
+}
+
+func generateConnectionInfo(d *database.Database, user *database.User) []ConnectionInfo {
+	var connections []ConnectionInfo
+	s := d.Content.Settings
+
+	// Generate Shadowsocks connections (legacy/direct)
+	auth := base64.StdEncoding.EncodeToString([]byte(user.ShadowsocksMethod + ":" + user.ShadowsocksPassword))
+	
+	// Add direct shadowsocks connection (always available)
+	connections = append(connections, ConnectionInfo{
+		Type:      "direct",
+		Protocol:  "shadowsocks",
+		Transport: "tcp",
+		Name:      "Shadowsocks (Direct)",
+		Link:      fmt.Sprintf("ss://%s@%s:%d#%s", auth, s.Host, 8445, "direct"),
+		Port:      8445,
+	})
+
+	// Generate protocol-specific connections from nodes
+	for _, node := range d.Content.Nodes {
+		if node.Protocol == "" || node.ServerPort == "" {
+			continue
+		}
+
+		// Create connection info based on node configuration
+		connInfo := ConnectionInfo{
+			Type:      "remote",
+			Protocol:  node.Protocol,
+			Transport: node.NetworkSettings.Transport,
+			Port:      node.ListeningPort,
+		}
+
+		// Set display name
+		if node.NetworkSettings.Transport != "" && node.NetworkSettings.Transport != "tcp" {
+			connInfo.Name = fmt.Sprintf("%s (%s)", 
+				formatProtocolName(node.Protocol), 
+				formatTransportName(node.NetworkSettings.Transport))
+		} else {
+			connInfo.Name = formatProtocolName(node.Protocol)
+		}
+
+		// Generate appropriate connection link
+		switch node.Protocol {
+		case "vmess":
+			connInfo.Link = generateVMessLink(node, user, s)
+		case "vless":
+			connInfo.Link = generateVLESSLink(node, user, s)
+		case "trojan":
+			connInfo.Link = generateTrojanLink(node, user, s)
+		case "shadowsocks":
+			connInfo.Link = generateShadowsocksLink(node, user, s)
+		}
+
+		if connInfo.Link != "" {
+			connections = append(connections, connInfo)
+		}
+	}
+
+	return connections
+}
+
+func formatProtocolName(protocol string) string {
+	switch protocol {
+	case "vmess":
+		return "VMess"
+	case "vless":
+		return "VLESS"
+	case "trojan":
+		return "Trojan"
+	case "shadowsocks":
+		return "Shadowsocks"
+	default:
+		return protocol
+	}
+}
+
+func formatTransportName(transport string) string {
+	switch transport {
+	case "ws":
+		return "WebSocket"
+	case "grpc":
+		return "gRPC"
+	case "http":
+		return "HTTP"
+	case "tcp":
+		return "TCP"
+	default:
+		return transport
+	}
+}
+
+func generateVMessLink(node *database.Node, user *database.User, settings *database.Settings) string {
+	// VMess link format: vmess://base64(json_config)
+	config := map[string]interface{}{
+		"v":    "2",
+		"ps":   node.ServerName,
+		"add":  settings.Host,
+		"port": node.ListeningPort,
+		"id":   generateUserUUID(user), // Generate UUID based on user
+		"aid":  "0",
+		"scy":  node.Encryption,
+		"net":  node.NetworkSettings.Transport,
+		"type": "none",
+		"host": "",
+		"path": "",
+		"tls":  "",
+	}
+
+	// Add transport-specific settings
+	if node.NetworkSettings.Transport == "ws" && node.NetworkSettings.Settings != nil {
+		if path, exists := node.NetworkSettings.Settings["path"]; exists {
+			config["path"] = path
+		}
+		if host, exists := node.NetworkSettings.Settings["host"]; exists {
+			config["host"] = host
+		}
+	}
+
+	// Convert to JSON and encode
+	jsonBytes, err := json.Marshal(config)
+	if err != nil {
+		return ""
+	}
+	
+	return "vmess://" + base64.StdEncoding.EncodeToString(jsonBytes)
+}
+
+func generateVLESSLink(node *database.Node, user *database.User, settings *database.Settings) string {
+	// VLESS link format: vless://uuid@host:port?params#name
+	uuid := generateUserUUID(user)
+	baseURL := fmt.Sprintf("vless://%s@%s:%d", uuid, settings.Host, node.ListeningPort)
+	
+	params := []string{
+		"encryption=none",
+		fmt.Sprintf("type=%s", node.NetworkSettings.Transport),
+	}
+	
+	// Add transport-specific parameters
+	if node.NetworkSettings.Transport == "ws" && node.NetworkSettings.Settings != nil {
+		if path, exists := node.NetworkSettings.Settings["path"]; exists {
+			params = append(params, fmt.Sprintf("path=%s", path))
+		}
+		if host, exists := node.NetworkSettings.Settings["host"]; exists {
+			params = append(params, fmt.Sprintf("host=%s", host))
+		}
+	}
+	
+	return fmt.Sprintf("%s?%s#%s", baseURL, joinParams(params), node.ServerName)
+}
+
+func generateTrojanLink(node *database.Node, user *database.User, settings *database.Settings) string {
+	// Trojan link format: trojan://password@host:port?params#name
+	password := generateTrojanPassword(user)
+	baseURL := fmt.Sprintf("trojan://%s@%s:%d", password, settings.Host, node.ListeningPort)
+	
+	params := []string{
+		fmt.Sprintf("type=%s", node.NetworkSettings.Transport),
+	}
+	
+	return fmt.Sprintf("%s?%s#%s", baseURL, joinParams(params), node.ServerName)
+}
+
+func generateShadowsocksLink(node *database.Node, user *database.User, settings *database.Settings) string {
+	// Shadowsocks link format: ss://base64(method:password)@host:port#name
+	auth := base64.StdEncoding.EncodeToString([]byte(user.ShadowsocksMethod + ":" + user.ShadowsocksPassword))
+	return fmt.Sprintf("ss://%s@%s:%d#%s", auth, settings.Host, node.ListeningPort, node.ServerName)
+}
+
+func generateUserUUID(user *database.User) string {
+	// Generate deterministic UUID based on user identity
+	// This ensures the same user always gets the same UUID
+	return fmt.Sprintf("%s-0000-0000-0000-000000000000", user.Identity[:8])
+}
+
+func generateTrojanPassword(user *database.User) string {
+	// Generate Trojan password based on user identity
+	return user.Identity
+}
+
+func joinParams(params []string) string {
+	result := ""
+	for i, param := range params {
+		if i > 0 {
+			result += "&"
+		}
+		result += param
+	}
+	return result
 }
 
 func ProfileRegenerate(coordinator *coordinator.Coordinator, d *database.Database) echo.HandlerFunc {
