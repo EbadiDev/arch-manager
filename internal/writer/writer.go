@@ -39,6 +39,11 @@ func (w *Writer) clients() []*xray.Client {
 func (w *Writer) makeProtocolInbound(node *database.Node, tag, password, network string, port int, clients []*xray.Client) (*xray.Inbound, error) {
 	xc := xray.NewConfig(w.c.Xray.LogLevel)
 	
+	var inbound *xray.Inbound
+	
+	// Create StreamSettings based on node configuration
+	streamSettings := w.createStreamSettings(node)
+	
 	switch node.Protocol {
 	case "shadowsocks":
 		// For Shadowsocks, generate a proper password if not provided
@@ -49,31 +54,237 @@ func (w *Writer) makeProtocolInbound(node *database.Node, tag, password, network
 				return nil, err
 			}
 		}
-		return xc.MakeShadowsocksInbound(tag, password, node.Encryption, network, port, clients), nil
+		// Note: Shadowsocks method still uses network parameter, not StreamSettings
+		transport := network
+		if node.NetworkSettings.Transport != "" {
+			transport = node.NetworkSettings.Transport
+		}
+		inbound = xc.MakeShadowsocksInbound(tag, password, node.Encryption, transport, port, clients)
 	case "vless":
 		// For VLESS, generate a proper UUID
 		uuid := utils.UUID()
-		var security interface{}
-		if node.Security == "reality" && node.SecuritySettings.Reality != nil {
-			security = node.SecuritySettings.Reality
-		} else if node.Security == "tls" && node.SecuritySettings.TLS != nil {
-			security = node.SecuritySettings.TLS
+		// Based on test: MakeVlessInbound("test", 10001, "uuid", "tcp", nil)
+		// Signature: tag, port, uuid, network, streamSettings
+		network := "tcp"
+		if node.NetworkSettings.Transport != "" {
+			network = node.NetworkSettings.Transport
 		}
-		return xc.MakeVlessInbound(tag, port, uuid, network, security), nil
+		inbound = xc.MakeVlessInbound(tag, port, uuid, network, streamSettings)
 	case "vmess":
 		// For VMess, generate a proper UUID
 		uuid := utils.UUID()
-		return xc.MakeVmessInbound(tag, port, uuid, node.Encryption, network), nil
+		// Based on test: MakeVmessInbound("test", 10002, "uuid", "auto", nil)
+		// Signature: tag, port, uuid, encryption, streamSettings
+		inbound = xc.MakeVmessInbound(tag, port, uuid, node.Encryption, streamSettings)
 	case "trojan":
-		var security interface{}
-		if node.Security == "tls" && node.SecuritySettings.TLS != nil {
-			security = node.SecuritySettings.TLS
+		// Based on test: MakeTrojanInbound("test", 10003, "password", "tcp", nil)
+		// Signature: tag, port, password, network, streamSettings
+		network := "tcp"
+		if node.NetworkSettings.Transport != "" {
+			network = node.NetworkSettings.Transport
 		}
-		// For Trojan, use password as-is
-		return xc.MakeTrojanInbound(tag, port, password, network, security), nil
+		inbound = xc.MakeTrojanInbound(tag, port, password, network, streamSettings)
 	default:
 		return nil, fmt.Errorf("unsupported protocol: %s", node.Protocol)
 	}
+	
+	return inbound, nil
+}
+
+// Create StreamSettings based on node network configuration
+func (w *Writer) createStreamSettings(node *database.Node) *xray.StreamSettings {
+	if node.NetworkSettings.Transport == "" || node.NetworkSettings.Transport == "tcp" {
+		return nil // No special transport needed for TCP
+	}
+	
+	switch node.NetworkSettings.Transport {
+	case "ws":
+		return w.createWebSocketSettings(node.NetworkSettings.Settings)
+	case "grpc":
+		return w.createGrpcSettings(node.NetworkSettings.Settings)
+	case "http":
+		return w.createHttpSettings(node.NetworkSettings.Settings)
+	case "kcp":
+		return w.createKcpSettings(node.NetworkSettings.Settings)
+	case "httpupgrade":
+		return w.createHttpUpgradeSettings(node.NetworkSettings.Settings)
+	case "xhttp":
+		return w.createXhttpSettings(node.NetworkSettings.Settings)
+	default:
+		// For unknown transports, create basic StreamSettings
+		return &xray.StreamSettings{
+			Network: node.NetworkSettings.Transport,
+		}
+	}
+}
+
+// Helper methods for creating transport-specific StreamSettings
+func (w *Writer) createWebSocketSettings(settings interface{}) *xray.StreamSettings {
+	streamSettings := &xray.StreamSettings{
+		Network: "ws",
+	}
+	
+	if settingsMap, ok := settings.(map[string]interface{}); ok {
+		wsSettings := &xray.WebSocketSettings{}
+		
+		if path, exists := settingsMap["path"]; exists {
+			if pathStr, ok := path.(string); ok {
+				wsSettings.Path = pathStr
+			}
+		}
+		if host, exists := settingsMap["host"]; exists {
+			if hostStr, ok := host.(string); ok {
+				wsSettings.Host = hostStr
+			}
+		}
+		if customHost, exists := settingsMap["custom_host"]; exists {
+			if customHostStr, ok := customHost.(string); ok {
+				wsSettings.CustomHost = customHostStr
+			}
+		}
+		
+		streamSettings.WsSettings = wsSettings
+	}
+	
+	return streamSettings
+}
+
+func (w *Writer) createGrpcSettings(settings interface{}) *xray.StreamSettings {
+	streamSettings := &xray.StreamSettings{
+		Network: "grpc",
+	}
+	
+	if settingsMap, ok := settings.(map[string]interface{}); ok {
+		grpcSettings := &xray.GrpcSettings{}
+		
+		if serviceName, exists := settingsMap["serviceName"]; exists {
+			if serviceNameStr, ok := serviceName.(string); ok {
+				grpcSettings.ServiceName = serviceNameStr
+			}
+		}
+		if authority, exists := settingsMap["authority"]; exists {
+			if authorityStr, ok := authority.(string); ok {
+				grpcSettings.Authority = authorityStr
+			}
+		}
+		
+		streamSettings.GrpcSettings = grpcSettings
+	}
+	
+	return streamSettings
+}
+
+func (w *Writer) createHttpSettings(settings interface{}) *xray.StreamSettings {
+	streamSettings := &xray.StreamSettings{
+		Network: "http",
+	}
+	
+	if settingsMap, ok := settings.(map[string]interface{}); ok {
+		httpSettings := &xray.HttpSettings{}
+		
+		if path, exists := settingsMap["path"]; exists {
+			if pathStr, ok := path.(string); ok {
+				httpSettings.Path = pathStr
+			}
+		}
+		if host, exists := settingsMap["host"]; exists {
+			if hostSlice, ok := host.([]interface{}); ok {
+				hostStrings := make([]string, len(hostSlice))
+				for i, h := range hostSlice {
+					if hostStr, ok := h.(string); ok {
+						hostStrings[i] = hostStr
+					}
+				}
+				httpSettings.Host = hostStrings
+			}
+		}
+		// Note: Method and Headers fields may not be available in current HttpSettings struct
+		// The arch-node package may need to be updated to include these fields
+		
+		streamSettings.HttpSettings = httpSettings
+	}
+	
+	return streamSettings
+}
+
+func (w *Writer) createKcpSettings(settings interface{}) *xray.StreamSettings {
+	streamSettings := &xray.StreamSettings{
+		Network: "kcp",
+	}
+	
+	if settingsMap, ok := settings.(map[string]interface{}); ok {
+		kcpSettings := &xray.KcpSettings{}
+		
+		if mtu, exists := settingsMap["mtu"]; exists {
+			if mtuFloat, ok := mtu.(float64); ok {
+				kcpSettings.Mtu = int(mtuFloat)
+			}
+		}
+		if seed, exists := settingsMap["seed"]; exists {
+			if seedStr, ok := seed.(string); ok {
+				kcpSettings.Seed = seedStr
+			}
+		}
+		
+		streamSettings.KcpSettings = kcpSettings
+	}
+	
+	return streamSettings
+}
+
+func (w *Writer) createHttpUpgradeSettings(settings interface{}) *xray.StreamSettings {
+	streamSettings := &xray.StreamSettings{
+		Network: "httpupgrade",
+	}
+	
+	if settingsMap, ok := settings.(map[string]interface{}); ok {
+		httpUpgradeSettings := &xray.HttpUpgradeSettings{}
+		
+		if path, exists := settingsMap["path"]; exists {
+			if pathStr, ok := path.(string); ok {
+				httpUpgradeSettings.Path = pathStr
+			}
+		}
+		if host, exists := settingsMap["host"]; exists {
+			if hostStr, ok := host.(string); ok {
+				httpUpgradeSettings.Host = hostStr
+			}
+		}
+		
+		streamSettings.HttpUpgradeSettings = httpUpgradeSettings
+	}
+	
+	return streamSettings
+}
+
+func (w *Writer) createXhttpSettings(settings interface{}) *xray.StreamSettings {
+	streamSettings := &xray.StreamSettings{
+		Network: "xhttp",
+	}
+	
+	if settingsMap, ok := settings.(map[string]interface{}); ok {
+		xhttpSettings := &xray.XhttpSettings{}
+		
+		if path, exists := settingsMap["path"]; exists {
+			if pathStr, ok := path.(string); ok {
+				xhttpSettings.Path = pathStr
+			}
+		}
+		if host, exists := settingsMap["host"]; exists {
+			if hostStr, ok := host.(string); ok {
+				xhttpSettings.Host = hostStr
+			}
+		}
+		if mode, exists := settingsMap["mode"]; exists {
+			if modeStr, ok := mode.(string); ok {
+				xhttpSettings.Mode = modeStr
+			}
+		}
+		
+		streamSettings.XhttpSettings = xhttpSettings
+	}
+	
+	return streamSettings
 }
 
 // Shadowsocks inbound factory (uses existing arch-node method)
@@ -97,12 +308,10 @@ func (w *Writer) makeProtocolOutbound(node *database.Node, tag, host, password, 
 		}
 		return xc.MakeVlessOutbound(tag, host, port, password, network), nil
 	case "vmess":
-		// For VMess: tag, address, port, uuid, encryption, network
-		network := "tcp" // Default network for outbound
-		if node.NetworkSettings.Transport != "" {
-			network = node.NetworkSettings.Transport
-		}
-		return xc.MakeVmessOutbound(tag, host, port, password, node.Encryption, network), nil
+		// Based on test: MakeVmessOutbound("test", "example.com", 443, "uuid", "auto", nil)
+		// Signature: tag, address, port, uuid, encryption, streamSettings
+		streamSettings := w.createStreamSettings(node)
+		return xc.MakeVmessOutbound(tag, host, port, password, node.Encryption, streamSettings), nil
 	case "trojan":
 		// For Trojan: tag, address, port, password, network
 		network := "tcp" // Default network for outbound

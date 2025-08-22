@@ -6,7 +6,7 @@ toolchain go1.24.2
 
 require (
 	github.com/cockroachdb/errors v1.12.0
-	github.com/ebadidev/arch-node v0.0.0-20250822143052-51d846532243
+	github.com/ebadidev/arch-node v0.0.0-20250822164514-bb3de4cc1a0b
 	github.com/go-playground/validator/v10 v10.27.0
 	github.com/google/uuid v1.6.0
 	github.com/labstack/echo/v4 v4.13.4
