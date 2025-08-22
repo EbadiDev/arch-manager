@@ -1,7 +1,5 @@
 # Xray Binary Management
 
-This project uses git submodules and automated scripts to manage Xray binaries instead of committing them directly to the repository.
-
 ## Setup
 
 ### Quick Setup (Linux x64 only)
@@ -39,24 +37,9 @@ third_party/
     └── LICENSE
 ```
 
-## Git Submodule
-
-The `.gitmodules` file references the official Xray-core repository for tracking releases:
-
-```
-[submodule "third_party/xray-releases"]
-    path = third_party/xray-releases
-    url = https://github.com/XTLS/Xray-core.git
-    branch = main
-```
-
 ## Updating Binaries
 
 To update to the latest Xray release:
 ```bash
 make setup-xray
 ```
-
-## Note
-
-The actual binary files are not committed to this repository. They are downloaded from official releases and should be ignored by git (see `.gitignore`).
