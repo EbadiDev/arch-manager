@@ -14,8 +14,8 @@ github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/dgryski/go-metro v0.0.0-20200812162917-85c65e2d0165 h1:BS21ZUJ/B5X2UVUbczfmdWH7GapPWAhxcMsDnjJTU1E=
 github.com/dgryski/go-metro v0.0.0-20200812162917-85c65e2d0165/go.mod h1:c9O8+fpSOX1DM8cPNSkX/qsBWdkD4yd2dpciOWQjpBw=
-github.com/ebadidev/arch-node v0.0.0-20250822113008-40e7171bace2 h1:YHNT1MZ0A6Y/pRcoJsu6DZ3Imv5vbahnsyGHRsTapeA=
-github.com/ebadidev/arch-node v0.0.0-20250822113008-40e7171bace2/go.mod h1:kopiZ3NjOAAoR/t/nZy3VSgVhureChPWfKRMmdfSgE8=
+github.com/ebadidev/arch-node v0.0.0-20250822143052-51d846532243 h1:9MIOJ/hssxMMikBrNlt7eyWeJ7jNtzdu8eT4xv7JAqA=
+github.com/ebadidev/arch-node v0.0.0-20250822143052-51d846532243/go.mod h1:kopiZ3NjOAAoR/t/nZy3VSgVhureChPWfKRMmdfSgE8=
 github.com/gabriel-vasile/mimetype v1.4.9 h1:5k+WDwEsD9eTLL8Tz3L0VnmVh9QxGjRmjBvAG7U/oYY=
 github.com/gabriel-vasile/mimetype v1.4.9/go.mod h1:WnSQhFKJuBlRyLiKohA/2DtIlPFAbguNaG7QCHcyGok=
 github.com/getsentry/sentry-go v0.34.1 h1:HSjc1C/OsnZttohEPrrqKH42Iud0HuLCXpv8cU1pWcw=

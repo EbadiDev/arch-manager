@@ -41,24 +41,35 @@ func (w *Writer) makeProtocolInbound(node *database.Node, tag, password, network
 	
 	switch node.Protocol {
 	case "shadowsocks":
+		// For Shadowsocks, generate a proper password if not provided
+		if password == "" {
+			var err error
+			password, err = utils.Key32()
+			if err != nil {
+				return nil, err
+			}
+		}
 		return xc.MakeShadowsocksInbound(tag, password, node.Encryption, network, port, clients), nil
 	case "vless":
-		// For VLESS, password is actually UUID
+		// For VLESS, generate a proper UUID
+		uuid := utils.UUID()
 		var security interface{}
 		if node.Security == "reality" && node.SecuritySettings.Reality != nil {
 			security = node.SecuritySettings.Reality
 		} else if node.Security == "tls" && node.SecuritySettings.TLS != nil {
 			security = node.SecuritySettings.TLS
 		}
-		return xc.MakeVlessInbound(tag, port, password, network, security), nil
+		return xc.MakeVlessInbound(tag, port, uuid, network, security), nil
 	case "vmess":
-		// For VMess, password is actually UUID
-		return xc.MakeVmessInbound(tag, port, password, node.Encryption, network), nil
+		// For VMess, generate a proper UUID
+		uuid := utils.UUID()
+		return xc.MakeVmessInbound(tag, port, uuid, node.Encryption, network), nil
 	case "trojan":
 		var security interface{}
 		if node.Security == "tls" && node.SecuritySettings.TLS != nil {
 			security = node.SecuritySettings.TLS
 		}
+		// For Trojan, use password as-is
 		return xc.MakeTrojanInbound(tag, port, password, network, security), nil
 	default:
 		return nil, fmt.Errorf("unsupported protocol: %s", node.Protocol)
@@ -200,7 +211,8 @@ func (w *Writer) LocalConfig() (*xray.Config, error) {
 			return nil, errors.WithStack(err)
 		}
 
-		// Create reverse connection setup
+		// Create reverse connection setup - ALWAYS use Shadowsocks for internal manager-to-node communication
+		// The selected protocol (VMess, VLESS, etc.) is only used for client-facing inbounds
 		if key, err = utils.Key32(); err != nil {
 			return nil, err
 		}
@@ -212,6 +224,41 @@ func (w *Writer) LocalConfig() (*xray.Config, error) {
 			inboundPort,
 			nil,
 		))
+
+		// Create client-facing inbound using the node's configured protocol
+		// Use the node's configured listening port
+		clientPort := s.ListeningPort
+		if clientPort == 0 {
+			// Fallback to random port if not configured
+			clientPort, err = utils.FreePort()
+			if err != nil {
+				return nil, errors.WithStack(err)
+			}
+		}
+		
+		clientInbound, err := w.makeProtocolInbound(
+			s,
+			fmt.Sprintf("client-%d", s.Id),
+			"", // password will be generated inside makeProtocolInbound
+			"tcp",
+			clientPort,
+			nil,
+		)
+		if err != nil {
+			// Fallback to Shadowsocks if protocol inbound creation fails
+			if key, err = utils.Key32(); err != nil {
+				return nil, err
+			}
+			clientInbound = xc.MakeShadowsocksInbound(
+				fmt.Sprintf("client-%d", s.Id),
+				key,
+				config.Shadowsocks2022Method, // Use 2022 method for consistency
+				"tcp",
+				clientPort,
+				nil,
+			)
+		}
+		xc.Inbounds = append(xc.Inbounds, clientInbound)
 
 		xc.Reverse.Portals = append(xc.Reverse.Portals, &xray.ReverseItem{
 			Tag:    fmt.Sprintf("portal-%d", s.Id),
@@ -281,7 +328,7 @@ func (w *Writer) RemoteConfig(node *database.Node, lastUpdate time.Time, passwor
 		)
 	}
 
-	// Create reverse outbound connection
+	// Create reverse outbound connection - Always use Shadowsocks for internal communication
 	internalOutbound := w.xray.Config().FindInbound(fmt.Sprintf("internal-%d", node.Id))
 	if internalOutbound != nil {
 		xc.Outbounds = append(xc.Outbounds, xc.MakeShadowsocksOutbound(
@@ -309,17 +356,10 @@ func (w *Writer) RemoteConfig(node *database.Node, lastUpdate time.Time, passwor
 		)
 	}
 
-	// Create remote inbound (hardcoded port for now - will be per-node later)
-	remotePort := 8446
-	if utils.PortFree(remotePort) {
-		xc.Inbounds = append(xc.Inbounds, xc.MakeShadowsocksInbound(
-			"remote",
-			password,
-			config.ShadowsocksMethod,
-			"tcp",
-			remotePort,
-			w.clients(),
-		))
+	// Create client-facing inbound using node's configured protocol
+	clientInbound, err := w.makeProtocolInbound(node, "remote", password, "tcp", node.ListeningPort, w.clients())
+	if err == nil && clientInbound != nil {
+		xc.Inbounds = append(xc.Inbounds, clientInbound)
 		xc.Routing.Rules = append(
 			xc.Routing.Rules,
 			&xray.Rule{
