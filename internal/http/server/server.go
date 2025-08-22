@@ -74,6 +74,11 @@ func (s *Server) Run() {
 	g2.DELETE("/nodes/:id", v1.NodesDelete(s.coordinator, s.database))
 
 	g2.GET("/nodes/:id/configs", v1.NodesConfigsShow(s.coordinator, s.writer, s.database))
+	
+	// Node configuration management endpoints
+	g2.GET("/nodes/:id/config", v1.NodeConfigGet(s.database))
+	g2.PUT("/nodes/:id/config", v1.NodeConfigUpdate(s.coordinator, s.database))
+	g2.POST("/nodes/config", v1.NodeConfigCreate(s.coordinator, s.database))
 
 	g2.GET("/stats", v1.StatsIndex(s.database))
 	g2.PATCH("/stats", v1.StatsUpdatePartial(s.database))
@@ -88,8 +93,6 @@ func (s *Server) Run() {
 
 	// Protocol management endpoints
 	g2.GET("/protocols", v1.ProtocolsList(s.database))
-	g2.GET("/nodes/:id/config", v1.NodeConfigGet(s.database))
-	g2.PUT("/nodes/:id/config", v1.NodeConfigUpdate(s.database))
 	g2.POST("/generate-reality-keys", v1.GenerateRealityKeys(s.database))
 
 	go func() {

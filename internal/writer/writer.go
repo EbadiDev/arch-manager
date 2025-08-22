@@ -35,20 +35,31 @@ func (w *Writer) clients() []*xray.Client {
 	return clients
 }
 
-// Protocol factory method - currently only supports Shadowsocks, extensible for future protocols
+// Protocol factory method - supports all protocols via arch-node package
 func (w *Writer) makeProtocolInbound(node *database.Node, tag, password, network string, port int, clients []*xray.Client) (*xray.Inbound, error) {
+	xc := xray.NewConfig(w.c.Xray.LogLevel)
+	
 	switch node.Protocol {
 	case "shadowsocks":
-		return w.makeShadowsocksInbound(tag, password, node.Encryption, network, port, clients), nil
+		return xc.MakeShadowsocksInbound(tag, password, node.Encryption, network, port, clients), nil
 	case "vless":
-		// TODO: Implement when arch-node package supports MakeVlessInbound
-		return nil, fmt.Errorf("VLESS protocol not yet supported - waiting for arch-node package update")
+		// For VLESS, password is actually UUID
+		var security interface{}
+		if node.Security == "reality" && node.SecuritySettings.Reality != nil {
+			security = node.SecuritySettings.Reality
+		} else if node.Security == "tls" && node.SecuritySettings.TLS != nil {
+			security = node.SecuritySettings.TLS
+		}
+		return xc.MakeVlessInbound(tag, port, password, network, security), nil
 	case "vmess":
-		// TODO: Implement when arch-node package supports MakeVmessInbound  
-		return nil, fmt.Errorf("VMess protocol not yet supported - waiting for arch-node package update")
+		// For VMess, password is actually UUID
+		return xc.MakeVmessInbound(tag, port, password, node.Encryption, network), nil
 	case "trojan":
-		// TODO: Implement when arch-node package supports MakeTrojanInbound
-		return nil, fmt.Errorf("Trojan protocol not yet supported - waiting for arch-node package update")
+		var security interface{}
+		if node.Security == "tls" && node.SecuritySettings.TLS != nil {
+			security = node.SecuritySettings.TLS
+		}
+		return xc.MakeTrojanInbound(tag, port, password, network, security), nil
 	default:
 		return nil, fmt.Errorf("unsupported protocol: %s", node.Protocol)
 	}
@@ -60,29 +71,37 @@ func (w *Writer) makeShadowsocksInbound(tag, password, method, network string, p
 	return xc.MakeShadowsocksInbound(tag, password, method, network, port, clients)
 }
 
-// Protocol outbound factory - currently only supports Shadowsocks
+// Protocol outbound factory - supports all protocols via arch-node package
 func (w *Writer) makeProtocolOutbound(node *database.Node, tag, host, password, method string, port int) (*xray.Outbound, error) {
+	xc := xray.NewConfig(w.c.Xray.LogLevel)
+	
 	switch node.Protocol {
 	case "shadowsocks":
-		return w.makeShadowsocksOutbound(tag, host, password, method, port), nil
+		return xc.MakeShadowsocksOutbound(tag, host, password, method, port), nil
 	case "vless":
-		// TODO: Implement when arch-node package supports MakeVlessOutbound
-		return nil, fmt.Errorf("VLESS outbound not yet supported - waiting for arch-node package update")
+		// For VLESS: tag, address, port, uuid, network
+		network := "tcp" // Default network for outbound
+		if node.NetworkSettings.Transport != "" {
+			network = node.NetworkSettings.Transport
+		}
+		return xc.MakeVlessOutbound(tag, host, port, password, network), nil
 	case "vmess":
-		// TODO: Implement when arch-node package supports MakeVmessOutbound
-		return nil, fmt.Errorf("VMess outbound not yet supported - waiting for arch-node package update")
+		// For VMess: tag, address, port, uuid, encryption, network
+		network := "tcp" // Default network for outbound
+		if node.NetworkSettings.Transport != "" {
+			network = node.NetworkSettings.Transport
+		}
+		return xc.MakeVmessOutbound(tag, host, port, password, node.Encryption, network), nil
 	case "trojan":
-		// TODO: Implement when arch-node package supports MakeTrojanOutbound
-		return nil, fmt.Errorf("Trojan outbound not yet supported - waiting for arch-node package update")
+		// For Trojan: tag, address, port, password, network
+		network := "tcp" // Default network for outbound
+		if node.NetworkSettings.Transport != "" {
+			network = node.NetworkSettings.Transport
+		}
+		return xc.MakeTrojanOutbound(tag, host, port, password, network), nil
 	default:
 		return nil, fmt.Errorf("unsupported protocol: %s", node.Protocol)
 	}
-}
-
-// Shadowsocks outbound factory (uses existing arch-node method)
-func (w *Writer) makeShadowsocksOutbound(tag, host, password, method string, port int) *xray.Outbound {
-	xc := xray.NewConfig(w.c.Xray.LogLevel)
-	return xc.MakeShadowsocksOutbound(tag, host, password, method, port)
 }
 
 func (w *Writer) LocalConfig() (*xray.Config, error) {
