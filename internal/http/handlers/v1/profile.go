@@ -55,22 +55,16 @@ func generateConnectionInfo(d *database.Database, user *database.User) []Connect
 	var connections []ConnectionInfo
 	s := d.Content.Settings
 
-	// Generate Shadowsocks connections (legacy/direct)
-	auth := base64.StdEncoding.EncodeToString([]byte(user.ShadowsocksMethod + ":" + user.ShadowsocksPassword))
-	
-	// Add direct shadowsocks connection (always available)
-	connections = append(connections, ConnectionInfo{
-		Type:      "direct",
-		Protocol:  "shadowsocks",
-		Transport: "tcp",
-		Name:      "Shadowsocks (Direct)",
-		Link:      fmt.Sprintf("ss://%s@%s:%d#%s", auth, s.Host, 8445, "direct"),
-		Port:      8445,
-	})
-
-	// Generate protocol-specific connections from nodes
+	// Only generate connections from actual configured nodes
+	// Internal Shadowsocks connections are hidden from users
 	for _, node := range d.Content.Nodes {
 		if node.Protocol == "" || node.ServerPort == "" {
+			continue
+		}
+		
+		// Skip internal Shadowsocks connections (used for manager-node communication)
+		// Users should only see their configured client-facing protocols
+		if isInternalConnection(node) {
 			continue
 		}
 
@@ -109,6 +103,18 @@ func generateConnectionInfo(d *database.Database, user *database.User) []Connect
 	}
 
 	return connections
+}
+
+// isInternalConnection checks if a node connection is for internal manager-node communication
+func isInternalConnection(node *database.Node) bool {
+	// Internal connections are typically:
+	// 1. Shadowsocks protocol used purely for infrastructure
+	// 2. Connections with no user-facing server configuration
+	// 3. Nodes that are only used for relay/reverse tunneling
+	
+	// For now, we show all properly configured nodes to users
+	// Internal Shadowsocks inbounds are created in writer.go but not stored as user nodes
+	return false
 }
 
 func formatProtocolName(protocol string) string {

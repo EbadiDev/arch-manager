@@ -335,79 +335,10 @@ func (w *Writer) LocalConfig() (*xray.Config, error) {
 	xc := xray.NewConfig(w.c.Xray.LogLevel)
 	xc.FindInbound("api").Port = apiPort
 
-	// TODO: For now, maintain backward compatibility by creating Shadowsocks inbounds
-	// In the future, this will be replaced with per-node protocol configuration
-	var key string
-	if len(clients) > 0 {
-		// Create relay inbound (hardcoded port for now - will be per-node later)
-		relayPort := 8443
-		if key, err = utils.Key32(); err != nil {
-			return nil, err
-		}
-		if utils.PortFree(relayPort) {
-			xc.Inbounds = append(xc.Inbounds, xc.MakeShadowsocksInbound(
-				"relay",
-				key,
-				config.ShadowsocksMethod,
-				"tcp,udp",
-				relayPort,
-				clients,
-			))
-		}
+	// Note: Legacy hardcoded Shadowsocks inbounds removed.
+	// Only node-specific protocol configurations will be created below.
 
-		// Create reverse inbound (hardcoded port for now - will be per-node later)
-		reversePort := 8444
-		if key, err = utils.Key32(); err != nil {
-			return nil, err
-		}
-		if utils.PortFree(reversePort) {
-			xc.Inbounds = append(xc.Inbounds, xc.MakeShadowsocksInbound(
-				"reverse",
-				key,
-				config.ShadowsocksMethod,
-				"tcp,udp",
-				reversePort,
-				clients,
-			))
-		}
-
-		// Create direct inbound (hardcoded port for now - will be per-node later)
-		directPort := 8445
-		if key, err = utils.Key32(); err != nil {
-			return nil, err
-		}
-		if utils.PortFree(directPort) {
-			xc.Inbounds = append(xc.Inbounds, xc.MakeShadowsocksInbound(
-				"direct",
-				key,
-				config.ShadowsocksMethod,
-				"tcp,udp",
-				directPort,
-				clients,
-			))
-		}
-	}
-
-	// Add routing rules
-	if len(clients) > 0 {
-		xc.Routing.Rules = append(xc.Routing.Rules, &xray.Rule{
-			InboundTag:  []string{"direct"},
-			OutboundTag: "out",
-		})
-
-		if len(w.database.Content.Nodes) > 0 {
-			xc.Routing.Rules = append(xc.Routing.Rules, &xray.Rule{
-				InboundTag:  []string{"relay"},
-				BalancerTag: "relay",
-			})
-			xc.Routing.Rules = append(xc.Routing.Rules, &xray.Rule{
-				InboundTag:  []string{"reverse"},
-				BalancerTag: "portal",
-			})
-		}
-	}
-
-	// Add balancers
+	// Add routing rules for nodes only
 	if len(w.database.Content.Nodes) > 0 {
 		xc.Routing.Balancers = append(xc.Routing.Balancers, &xray.Balancer{Tag: "relay", Selector: []string{}})
 		xc.Routing.Balancers = append(xc.Routing.Balancers, &xray.Balancer{Tag: "portal", Selector: []string{}})
@@ -415,6 +346,8 @@ func (w *Writer) LocalConfig() (*xray.Config, error) {
 
 	// Configure nodes
 	for _, s := range w.database.Content.Nodes {
+		var key string // Declare key variable for each node
+		
 		inboundPort, err := utils.FreePort()
 		if err != nil {
 			return nil, errors.WithStack(err)
@@ -435,7 +368,7 @@ func (w *Writer) LocalConfig() (*xray.Config, error) {
 		))
 
 		// Create client-facing inbound using the node's configured protocol
-		// Use the node's configured listening port
+		// Use the node's configured listening port and pass actual clients
 		clientPort := s.ListeningPort
 		if clientPort == 0 {
 			// Fallback to random port if not configured
@@ -451,7 +384,7 @@ func (w *Writer) LocalConfig() (*xray.Config, error) {
 			"", // password will be generated inside makeProtocolInbound
 			"tcp",
 			clientPort,
-			nil,
+			clients, // Pass the actual user clients
 		)
 		if err != nil {
 			// Fallback to Shadowsocks if protocol inbound creation fails
@@ -464,7 +397,7 @@ func (w *Writer) LocalConfig() (*xray.Config, error) {
 				config.Shadowsocks2022Method, // Use 2022 method for consistency
 				"tcp",
 				clientPort,
-				nil,
+				clients, // Pass the actual user clients
 			)
 		}
 		xc.Inbounds = append(xc.Inbounds, clientInbound)
