@@ -164,6 +164,44 @@ func generateVMessLink(node *database.Node, user *database.User, settings *datab
 		"tls":  "",
 	}
 
+	// Set security (TLS) field based on node security configuration
+	switch node.Security {
+	case "tls":
+		config["tls"] = "tls"
+		// Add TLS-specific settings if available
+		if node.SecuritySettings.TLS != nil {
+			if node.SecuritySettings.TLS.SNI != "" {
+				config["sni"] = node.SecuritySettings.TLS.SNI
+			} else if node.SecuritySettings.TLS.ServerName != "" {
+				config["sni"] = node.SecuritySettings.TLS.ServerName // fallback to server_name
+			}
+			
+			// Add fingerprint if configured
+			if node.SecuritySettings.TLS.Fingerprint != "" {
+				config["fp"] = node.SecuritySettings.TLS.Fingerprint
+			}
+			
+			// Add ALPN if configured
+			if len(node.SecuritySettings.TLS.ALPN) > 0 {
+				// Join ALPN protocols with comma
+				alpnStr := ""
+				for i, protocol := range node.SecuritySettings.TLS.ALPN {
+					if i > 0 {
+						alpnStr += ","
+					}
+					alpnStr += protocol
+				}
+				config["alpn"] = alpnStr
+			}
+		}
+	case "none":
+		config["tls"] = ""
+	default:
+		// VMess doesn't support Reality or other security types
+		// Default to no TLS for unsupported security types
+		config["tls"] = ""
+	}
+
 	// Add transport-specific settings
 	if node.NetworkSettings.Settings != nil {
 		switch node.NetworkSettings.Transport {
@@ -235,13 +273,169 @@ func generateVLESSLink(node *database.Node, user *database.User, settings *datab
 		fmt.Sprintf("type=%s", node.NetworkSettings.Transport),
 	}
 	
-	// Add transport-specific parameters
-	if node.NetworkSettings.Transport == "ws" && node.NetworkSettings.Settings != nil {
-		if path, exists := node.NetworkSettings.Settings["path"]; exists {
-			params = append(params, fmt.Sprintf("path=%s", path))
+	// Add security settings
+	switch node.Security {
+	case "tls":
+		params = append(params, "security=tls")
+		
+		if node.SecuritySettings.TLS != nil {
+			// Add SNI
+			if node.SecuritySettings.TLS.SNI != "" {
+				params = append(params, fmt.Sprintf("sni=%s", node.SecuritySettings.TLS.SNI))
+			} else if node.SecuritySettings.TLS.ServerName != "" {
+				params = append(params, fmt.Sprintf("sni=%s", node.SecuritySettings.TLS.ServerName))
+			}
+			
+			// Add fingerprint
+			if node.SecuritySettings.TLS.Fingerprint != "" {
+				params = append(params, fmt.Sprintf("fp=%s", node.SecuritySettings.TLS.Fingerprint))
+			}
+			
+			// Add ALPN
+			if len(node.SecuritySettings.TLS.ALPN) > 0 {
+				alpnStr := ""
+				for i, protocol := range node.SecuritySettings.TLS.ALPN {
+					if i > 0 {
+						alpnStr += ","
+					}
+					alpnStr += protocol
+				}
+				params = append(params, fmt.Sprintf("alpn=%s", alpnStr))
+			}
+			
+			// Add allowInsecure
+			if node.SecuritySettings.TLS.AllowInsecure {
+				params = append(params, "allowInsecure=1")
+			}
 		}
-		if host, exists := node.NetworkSettings.Settings["host"]; exists {
-			params = append(params, fmt.Sprintf("host=%s", host))
+	case "reality":
+		params = append(params, "security=reality")
+		
+		if node.SecuritySettings.Reality != nil {
+			// Add Reality fingerprint (most commonly configured)
+			if node.SecuritySettings.Reality.Fingerprint != "" {
+				params = append(params, fmt.Sprintf("fp=%s", node.SecuritySettings.Reality.Fingerprint))
+			}
+			
+			// Add Reality server names (SNI)
+			if len(node.SecuritySettings.Reality.ServerNames) > 0 {
+				params = append(params, fmt.Sprintf("sni=%s", node.SecuritySettings.Reality.ServerNames[0]))
+			}
+			
+			// Add Reality public key (critical for connection)
+			if node.SecuritySettings.Reality.PublicKey != "" {
+				params = append(params, fmt.Sprintf("pbk=%s", node.SecuritySettings.Reality.PublicKey))
+			}
+			
+			// Add Reality short ID (use first one if multiple)
+			if len(node.SecuritySettings.Reality.ShortIDs) > 0 {
+				params = append(params, fmt.Sprintf("sid=%s", node.SecuritySettings.Reality.ShortIDs[0]))
+			}
+			
+			// Add Reality spider X (spx) if configured
+			if node.SecuritySettings.Reality.SpiderX != "" {
+				params = append(params, fmt.Sprintf("spx=%s", node.SecuritySettings.Reality.SpiderX))
+			}
+		}
+	case "none":
+		// No security parameters needed
+	default:
+		// Invalid security type - should not happen due to validation
+		// But handle gracefully by defaulting to no security
+	}
+	
+	// Add transport-specific parameters
+	if node.NetworkSettings.Settings != nil {
+		switch node.NetworkSettings.Transport {
+		case "ws":
+			if path, exists := node.NetworkSettings.Settings["path"]; exists {
+				params = append(params, fmt.Sprintf("path=%s", path))
+			}
+			if host, exists := node.NetworkSettings.Settings["host"]; exists {
+				params = append(params, fmt.Sprintf("host=%s", host))
+			}
+		case "grpc":
+			if serviceName, exists := node.NetworkSettings.Settings["serviceName"]; exists {
+				params = append(params, fmt.Sprintf("serviceName=%s", serviceName))
+			}
+			if authority, exists := node.NetworkSettings.Settings["authority"]; exists {
+				params = append(params, fmt.Sprintf("authority=%s", authority))
+			}
+		case "http":
+			// HTTP+TCP transport settings
+			if path, exists := node.NetworkSettings.Settings["path"]; exists {
+				params = append(params, fmt.Sprintf("path=%s", path))
+			}
+			if host, exists := node.NetworkSettings.Settings["host"]; exists {
+				if hosts, ok := host.([]interface{}); ok && len(hosts) > 0 {
+					params = append(params, fmt.Sprintf("host=%s", hosts[0]))
+				} else {
+					params = append(params, fmt.Sprintf("host=%s", host))
+				}
+			}
+		case "xhttp":
+			// XHTTP transport settings
+			if path, exists := node.NetworkSettings.Settings["path"]; exists {
+				params = append(params, fmt.Sprintf("path=%s", path))
+			}
+			if host, exists := node.NetworkSettings.Settings["host"]; exists {
+				if hosts, ok := host.([]interface{}); ok && len(hosts) > 0 {
+					params = append(params, fmt.Sprintf("host=%s", hosts[0]))
+				} else {
+					params = append(params, fmt.Sprintf("host=%s", host))
+				}
+			}
+			// XHTTP-specific parameters
+			if mode, exists := node.NetworkSettings.Settings["mode"]; exists {
+				params = append(params, fmt.Sprintf("mode=%s", mode))
+			}
+			if customHost, exists := node.NetworkSettings.Settings["custom_host"]; exists {
+				params = append(params, fmt.Sprintf("custom_host=%s", customHost))
+			}
+			if noGRPCHeader, exists := node.NetworkSettings.Settings["noGRPCHeader"]; exists {
+				if noGRPC, ok := noGRPCHeader.(bool); ok && noGRPC {
+					params = append(params, "noGRPCHeader=true")
+				}
+			}
+			if noSSEHeader, exists := node.NetworkSettings.Settings["noSSEHeader"]; exists {
+				if noSSE, ok := noSSEHeader.(bool); ok && noSSE {
+					params = append(params, "noSSEHeader=true")
+				}
+			}
+		case "kcp":
+			// KCP transport settings
+			if header, exists := node.NetworkSettings.Settings["header"]; exists {
+				if headerMap, ok := header.(map[string]interface{}); ok {
+					if headerType, exists := headerMap["type"]; exists {
+						params = append(params, fmt.Sprintf("headerType=%s", headerType))
+					}
+					if domain, exists := headerMap["domain"]; exists {
+						params = append(params, fmt.Sprintf("host=%s", domain))
+					}
+				}
+			}
+			if seed, exists := node.NetworkSettings.Settings["seed"]; exists {
+				params = append(params, fmt.Sprintf("seed=%s", seed))
+			}
+		case "tcp":
+			// TCP transport with optional HTTP header
+			if header, exists := node.NetworkSettings.Settings["header"]; exists {
+				if headerMap, ok := header.(map[string]interface{}); ok {
+					if headerType, exists := headerMap["type"]; exists && headerType == "http" {
+						// TCP with HTTP header obfuscation
+						if path, exists := headerMap["path"]; exists {
+							params = append(params, fmt.Sprintf("path=%s", path))
+						}
+						if host, exists := headerMap["host"]; exists {
+							if hosts, ok := host.([]interface{}); ok && len(hosts) > 0 {
+								params = append(params, fmt.Sprintf("host=%s", hosts[0]))
+							} else {
+								params = append(params, fmt.Sprintf("host=%s", host))
+							}
+						}
+					}
+				}
+			}
 		}
 	}
 	
@@ -249,12 +443,120 @@ func generateVLESSLink(node *database.Node, user *database.User, settings *datab
 }
 
 func generateTrojanLink(node *database.Node, user *database.User, settings *database.Settings) string {
+	// Trojan requires TLS security - validate using tagged switch
+	switch node.Security {
+	case "tls":
+		// Valid - continue with link generation
+	default:
+		// Invalid security for Trojan - return empty link
+		return ""
+	}
+	
 	// Trojan link format: trojan://password@host:port?params#name
 	password := generateTrojanPassword(user)
 	baseURL := fmt.Sprintf("trojan://%s@%s:%d", password, settings.Host, node.ListeningPort)
 	
 	params := []string{
 		fmt.Sprintf("type=%s", node.NetworkSettings.Transport),
+		"security=tls", // Always TLS for Trojan
+	}
+	
+	// Add TLS settings (required for Trojan)
+	if node.SecuritySettings.TLS != nil {
+		// Add SNI
+		if node.SecuritySettings.TLS.SNI != "" {
+			params = append(params, fmt.Sprintf("sni=%s", node.SecuritySettings.TLS.SNI))
+		} else if node.SecuritySettings.TLS.ServerName != "" {
+			params = append(params, fmt.Sprintf("sni=%s", node.SecuritySettings.TLS.ServerName))
+		}
+		
+		// Add fingerprint
+		if node.SecuritySettings.TLS.Fingerprint != "" {
+			params = append(params, fmt.Sprintf("fp=%s", node.SecuritySettings.TLS.Fingerprint))
+		}
+		
+		// Add ALPN
+		if len(node.SecuritySettings.TLS.ALPN) > 0 {
+			alpnStr := ""
+			for i, protocol := range node.SecuritySettings.TLS.ALPN {
+				if i > 0 {
+					alpnStr += ","
+				}
+				alpnStr += protocol
+			}
+			params = append(params, fmt.Sprintf("alpn=%s", alpnStr))
+		}
+		
+		// Add allowInsecure
+		if node.SecuritySettings.TLS.AllowInsecure {
+			params = append(params, "allowInsecure=1")
+		}
+	}
+	
+	// Add transport-specific parameters
+	if node.NetworkSettings.Settings != nil {
+		switch node.NetworkSettings.Transport {
+		case "ws":
+			if path, exists := node.NetworkSettings.Settings["path"]; exists {
+				params = append(params, fmt.Sprintf("path=%s", path))
+			}
+			if host, exists := node.NetworkSettings.Settings["host"]; exists {
+				params = append(params, fmt.Sprintf("host=%s", host))
+			}
+		case "grpc":
+			if serviceName, exists := node.NetworkSettings.Settings["serviceName"]; exists {
+				params = append(params, fmt.Sprintf("serviceName=%s", serviceName))
+			}
+			if authority, exists := node.NetworkSettings.Settings["authority"]; exists {
+				params = append(params, fmt.Sprintf("authority=%s", authority))
+			}
+		case "http":
+			// HTTP+TCP transport settings
+			if path, exists := node.NetworkSettings.Settings["path"]; exists {
+				params = append(params, fmt.Sprintf("path=%s", path))
+			}
+			if host, exists := node.NetworkSettings.Settings["host"]; exists {
+				if hosts, ok := host.([]interface{}); ok && len(hosts) > 0 {
+					params = append(params, fmt.Sprintf("host=%s", hosts[0]))
+				} else {
+					params = append(params, fmt.Sprintf("host=%s", host))
+				}
+			}
+		case "kcp":
+			// KCP transport settings
+			if header, exists := node.NetworkSettings.Settings["header"]; exists {
+				if headerMap, ok := header.(map[string]interface{}); ok {
+					if headerType, exists := headerMap["type"]; exists {
+						params = append(params, fmt.Sprintf("headerType=%s", headerType))
+					}
+					if domain, exists := headerMap["domain"]; exists {
+						params = append(params, fmt.Sprintf("host=%s", domain))
+					}
+				}
+			}
+			if seed, exists := node.NetworkSettings.Settings["seed"]; exists {
+				params = append(params, fmt.Sprintf("seed=%s", seed))
+			}
+		case "tcp":
+			// TCP transport with optional HTTP header
+			if header, exists := node.NetworkSettings.Settings["header"]; exists {
+				if headerMap, ok := header.(map[string]interface{}); ok {
+					if headerType, exists := headerMap["type"]; exists && headerType == "http" {
+						// TCP with HTTP header obfuscation
+						if path, exists := headerMap["path"]; exists {
+							params = append(params, fmt.Sprintf("path=%s", path))
+						}
+						if host, exists := headerMap["host"]; exists {
+							if hosts, ok := host.([]interface{}); ok && len(hosts) > 0 {
+								params = append(params, fmt.Sprintf("host=%s", hosts[0]))
+							} else {
+								params = append(params, fmt.Sprintf("host=%s", host))
+							}
+						}
+					}
+				}
+			}
+		}
 	}
 	
 	return fmt.Sprintf("%s?%s#%s", baseURL, joinParams(params), node.ServerName)
