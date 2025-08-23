@@ -37,11 +37,6 @@ SERVICE_NAME=$(basename "$ROOT")
 # Configure Git
 git config pull.rebase false
 
-# Initialize and update git submodules (for web interface)
-echo "Initializing git submodules..."
-git submodule init
-git submodule update --recursive --force
-
 # Configure storage permissions
 chmod 0777 "$ROOT/storage"
 

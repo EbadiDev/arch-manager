@@ -131,16 +131,22 @@ func (d *Database) GenerateUserIdentity() string {
 
 func (d *Database) GenerateUserPassword() string {
 	for {
-		r := random.String(16)
+		// Generate a proper Shadowsocks 2022 compatible base64-encoded key
+		key, err := utils.Key32()
+		if err != nil {
+			// Fallback to old method if key generation fails
+			key = random.String(16)
+		}
+		
 		isUnique := true
 		for _, user := range d.Content.Users {
-			if user.ShadowsocksPassword == r {
+			if user.ShadowsocksPassword == key {
 				isUnique = false
 				break
 			}
 		}
 		if isUnique {
-			return r
+			return key
 		}
 	}
 }

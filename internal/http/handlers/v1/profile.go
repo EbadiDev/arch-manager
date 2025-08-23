@@ -165,12 +165,31 @@ func generateVMessLink(node *database.Node, user *database.User, settings *datab
 	}
 
 	// Add transport-specific settings
-	if node.NetworkSettings.Transport == "ws" && node.NetworkSettings.Settings != nil {
-		if path, exists := node.NetworkSettings.Settings["path"]; exists {
-			config["path"] = path
-		}
-		if host, exists := node.NetworkSettings.Settings["host"]; exists {
-			config["host"] = host
+	if node.NetworkSettings.Settings != nil {
+		switch node.NetworkSettings.Transport {
+		case "ws":
+			// WebSocket transport settings
+			if path, exists := node.NetworkSettings.Settings["path"]; exists {
+				config["path"] = path
+			}
+			if host, exists := node.NetworkSettings.Settings["host"]; exists {
+				config["host"] = host
+			}
+		case "http":
+			// HTTP transport settings
+			config["net"] = "tcp" // HTTP transport uses TCP network
+			config["type"] = "http" // Set header type to http
+			if path, exists := node.NetworkSettings.Settings["path"]; exists {
+				config["path"] = path
+			}
+			if host, exists := node.NetworkSettings.Settings["host"]; exists {
+				if hosts, ok := host.([]interface{}); ok && len(hosts) > 0 {
+					// Use first host from array
+					config["host"] = hosts[0]
+				} else {
+					config["host"] = host
+				}
+			}
 		}
 	}
 
@@ -220,7 +239,8 @@ func generateTrojanLink(node *database.Node, user *database.User, settings *data
 
 func generateShadowsocksLink(node *database.Node, user *database.User, settings *database.Settings) string {
 	// Shadowsocks link format: ss://base64(method:password)@host:port#name
-	auth := base64.StdEncoding.EncodeToString([]byte(user.ShadowsocksMethod + ":" + user.ShadowsocksPassword))
+	// Use the node's encryption method, not the user's method
+	auth := base64.StdEncoding.EncodeToString([]byte(node.Encryption + ":" + user.ShadowsocksPassword))
 	return fmt.Sprintf("ss://%s@%s:%d#%s", auth, settings.Host, node.ListeningPort, node.ServerName)
 }
 

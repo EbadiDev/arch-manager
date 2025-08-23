@@ -85,24 +85,6 @@ func NodesStore(coordinator *coordinator.Coordinator, d *database.Database) echo
 			node.HttpToken = r.HttpToken
 			node.Host = r.Host
 			node.HttpPort = r.HttpPort
-			
-			// Set default protocol configuration
-			node.CoreType = "xray"
-			node.Protocol = "shadowsocks"
-			node.Encryption = "2022-blake3-aes-128-gcm"
-			node.Security = "none"
-			node.CertMode = "none"
-			node.ListeningIP = "0.0.0.0"
-			node.ListeningPort = 10001
-			node.NetworkSettings = database.NetworkConfig{
-				Transport:           "tcp",
-				AcceptProxyProtocol: false,
-				Settings: map[string]interface{}{
-					"header": map[string]interface{}{
-						"type": "none",
-					},
-				},
-			}
 
 			d.Content.Nodes = append(d.Content.Nodes, node)
 		}

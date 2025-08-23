@@ -14,11 +14,6 @@ build:
 setup:
 	@./scripts/setup.sh
 
-.PHONY: setup-submodules
-setup-submodules:
-	@git submodule init
-	@git submodule update --recursive --force
-
 .PHONY: setup-xray
 setup-xray:
 	@./scripts/setup-xray.sh
@@ -52,5 +47,4 @@ update:
 	@git reset --hard
 	@git clean -fd
 	@git pull
-	@git submodule update --init --recursive --force
 	@./scripts/setup.sh

@@ -29,7 +29,8 @@ func (w *Writer) clients() []*xray.Client {
 		clients = append(clients, &xray.Client{
 			Email:    strconv.Itoa(u.Id),
 			Password: u.ShadowsocksPassword,
-			Method:   u.ShadowsocksMethod,
+			// Note: For Shadowsocks 2022 multi-user, method must be empty for individual users
+			Method:   "",
 		})
 	}
 	return clients
@@ -175,33 +176,62 @@ func (w *Writer) createGrpcSettings(settings interface{}) *xray.StreamSettings {
 }
 
 func (w *Writer) createHttpSettings(settings interface{}) *xray.StreamSettings {
+	// HTTP transport was deprecated and moved to XHTTP
+	// What we actually want is TCP transport with HTTP header obfuscation
 	streamSettings := &xray.StreamSettings{
-		Network: "http",
+		Network: "tcp",
 	}
 	
 	if settingsMap, ok := settings.(map[string]interface{}); ok {
-		httpSettings := &xray.HttpSettings{}
-		
-		if path, exists := settingsMap["path"]; exists {
-			if pathStr, ok := path.(string); ok {
-				httpSettings.Path = pathStr
-			}
+		tcpSettings := &xray.TcpSettings{
+			Header: &xray.TcpHeaderObject{
+				Type: "http",
+			},
 		}
-		if host, exists := settingsMap["host"]; exists {
-			if hostSlice, ok := host.([]interface{}); ok {
-				hostStrings := make([]string, len(hostSlice))
-				for i, h := range hostSlice {
-					if hostStr, ok := h.(string); ok {
-						hostStrings[i] = hostStr
+		
+		// Create HTTP response configuration for TCP header obfuscation
+		response := &xray.HttpResponseObject{
+			Version: "1.1",
+			Status:  "200",
+			Reason:  "OK",
+			Headers: map[string][]string{
+				"Content-Type": {
+					"application/octet-stream",
+					"video/mpeg", 
+					"application/x-msdownload",
+					"text/html",
+					"application/x-shockwave-flash",
+				},
+				"Transfer-Encoding": {"chunked"},
+				"Connection":        {"keep-alive"},
+				"Pragma":           {"no-cache"},
+			},
+		}
+		
+		// Override with custom headers if provided
+		if headers, exists := settingsMap["headers"]; exists {
+			if headersMap, ok := headers.(map[string]interface{}); ok {
+				customHeaders := make(map[string][]string)
+				for key, value := range headersMap {
+					if valueSlice, ok := value.([]interface{}); ok {
+						valueStrings := make([]string, len(valueSlice))
+						for i, v := range valueSlice {
+							if vStr, ok := v.(string); ok {
+								valueStrings[i] = vStr
+							}
+						}
+						customHeaders[key] = valueStrings
 					}
 				}
-				httpSettings.Host = hostStrings
+				// Merge custom headers with defaults
+				for key, value := range customHeaders {
+					response.Headers[key] = value
+				}
 			}
 		}
-		// Note: Method and Headers fields may not be available in current HttpSettings struct
-		// The arch-node package may need to be updated to include these fields
 		
-		streamSettings.HttpSettings = httpSettings
+		tcpSettings.Header.Response = response
+		streamSettings.TcpSettings = tcpSettings
 	}
 	
 	return streamSettings
