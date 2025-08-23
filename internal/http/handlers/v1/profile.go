@@ -1,5 +1,6 @@
 package v1
-
+// TODO : Refactor needed , it's best to have a better structure for each client
+// but for now I am on testing phase so ill skip this part to make it more organized
 import (
 	"encoding/base64"
 	"encoding/json"
