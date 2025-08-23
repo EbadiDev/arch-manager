@@ -175,6 +175,29 @@ func generateVMessLink(node *database.Node, user *database.User, settings *datab
 			if host, exists := node.NetworkSettings.Settings["host"]; exists {
 				config["host"] = host
 			}
+		case "kcp":
+			// KCP transport settings
+			if header, exists := node.NetworkSettings.Settings["header"]; exists {
+				if headerMap, ok := header.(map[string]interface{}); ok {
+					if headerType, exists := headerMap["type"]; exists {
+						config["type"] = headerType // KCP header type (none, srtp, utp, etc.)
+					}
+					if domain, exists := headerMap["domain"]; exists {
+						config["host"] = domain // KCP domain goes in host field
+					}
+				}
+			}
+			if seed, exists := node.NetworkSettings.Settings["seed"]; exists {
+				config["path"] = seed // KCP seed goes in path field
+			}
+		case "grpc":
+			// gRPC transport settings
+			if serviceName, exists := node.NetworkSettings.Settings["serviceName"]; exists {
+				config["path"] = serviceName // gRPC service name goes in path
+			}
+			if authority, exists := node.NetworkSettings.Settings["authority"]; exists {
+				config["host"] = authority // gRPC authority goes in host
+			}
 		case "http":
 			// HTTP transport settings
 			config["net"] = "tcp" // HTTP transport uses TCP network
